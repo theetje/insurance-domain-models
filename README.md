@@ -1,10 +1,10 @@
-# Test Model - Domain Model
+# Test Insurance Model - Domain Model
 
-Test model to verify functionality
+SIVI AFD 2.0 compliant test model
 
 ## Overview
 
-This repository contains the domain model for Test Model, built using the SIVI AFD 2.0 standard for Dutch insurance industry.
+This repository contains the domain model for Test Insurance Model, built using the SIVI AFD 2.0 standard for Dutch insurance industry.
 
 ## Structure
 
@@ -31,7 +31,7 @@ The UML diagrams in this repository are automatically generated from the domain 
 
 ## Version History
 
-- Version 1.0.0 - 2025-06-23T23:24:32.386Z
+- Version 1.0.0 - 2025-06-23T23:27:54.785Z
 
 ## Integration with Confluence
 
