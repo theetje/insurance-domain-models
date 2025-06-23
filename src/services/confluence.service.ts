@@ -58,7 +58,8 @@ export class ConfluenceService {
   async testConnection(): Promise<boolean> {
     try {
       this.logger.info('Testing Confluence connection');
-      const response = await this.client.get('/space');
+      // Try to get the current user to test authentication
+      const response = await this.client.get('/user/current');
       this.logger.info('Confluence connection successful');
       return response.status === 200;
     } catch (error) {
