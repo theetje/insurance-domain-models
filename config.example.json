@@ -1,0 +1,39 @@
+{
+  "git": {
+    "repositoryUrl": "https://github.com/your-org/domain-models.git",
+    "branch": "main",
+    "username": "your-username",
+    "token": "your-personal-access-token",
+    "modelsPath": "models",
+    "outputPath": "output"
+  },
+  "confluence": {
+    "baseUrl": "https://your-org.atlassian.net/wiki",
+    "username": "your-email@company.com",
+    "apiToken": "your-confluence-api-token",
+    "spaceKey": "MODELS",
+    "pageTitle": "Domain Models - SIVI AFD 2.0",
+    "parentPageId": "123456789"
+  },
+  "diagram": {
+    "format": "mermaid",
+    "theme": "default",
+    "direction": "TB",
+    "showAttributes": true,
+    "showMethods": false,
+    "showRelationships": true,
+    "includeMetadata": true
+  },
+  "sivi": {
+    "baseUrl": "https://www.sivi.org/afd",
+    "version": "2.0"
+  },
+  "output": {
+    "directory": "./output",
+    "modelsDirectory": "./models"
+  },
+  "logging": {
+    "level": "info",
+    "file": "./logs/model-creator.log"
+  }
+}
