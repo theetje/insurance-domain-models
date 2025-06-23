@@ -58,9 +58,11 @@ export class ModelCreator {
       this.siviService = new SiviService(this.config.sivi.baseUrl, this.config.sivi.version);
 
       // Initialize Git service if configured
-      if (this.config.git.repositoryUrl) {
-        this.gitService = new GitService(this.config.git);
+      if (this.config.git && this.config.git.repositoryUrl) {
+        this.logger.info('Initializing Git service...');
+        this.gitService = new GitService(this.config.git, process.cwd());
         await this.gitService.initializeRepository();
+        this.logger.info('Git service initialized successfully');
       }
 
       // Initialize Confluence service if configured
