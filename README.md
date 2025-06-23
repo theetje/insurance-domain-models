@@ -1,10 +1,10 @@
-# Test Insurance Model - Domain Model
+# WIA Verzekering met Captive Constructie - Domain Model
 
-SIVI AFD 2.0 compliant test model
+SIVI AFD 2.0 compliant WIA insurance model with captive structure
 
 ## Overview
 
-This repository contains the domain model for Test Insurance Model, built using the SIVI AFD 2.0 standard for Dutch insurance industry.
+This repository contains the domain model for WIA Verzekering met Captive Constructie, built using the SIVI AFD 2.0 standard for Dutch insurance industry. The model represents a Work Disability Insurance (WIA) policy with a captive construction involving multiple parties in the insurance chain.
 
 ## Structure
 
@@ -13,17 +13,24 @@ This repository contains the domain model for Test Insurance Model, built using 
 
 ## Entities
 
-- **Policy**: Insurance policy/contract entity
-- **Coverage**: Insurance coverage details
-- **Party**: Parties involved in insurance policy
-- **Claim**: Insurance claim entity
-- **Premium**: Insurance premium information
-- **Object**: Insured object/item
-- **Clause**: Policy clause or condition
+- **WIA Policy**: WIA insurance policy with captive construction
+- **Party**: All parties involved in the WIA insurance chain (policyHolder, captive, intermediary, insurer)
+- **WIA Coverage**: WIA insurance coverage details
+- **Insured Employee**: Employee covered under WIA insurance
+- **WIA Premium**: Premium information for WIA insurance
+- **WIA Claim**: WIA disability claim entity
+
+## Insurance Chain Structure
+
+The model represents the following insurance chain:
+1. **Organization** (Policyholder) - The employer organization
+2. **Captive** - The captive insurance company owned by the organization
+3. **Intermediary** - Meijers (Insurance broker)
+4. **Insurer** - Hienfeld (Insurance company)
 
 ## SIVI AFD 2.0 Compliance
 
-This model is based on SIVI AFD 2.0 and follows the Dutch insurance industry standards.
+This model is based on SIVI AFD 2.0 and follows the Dutch insurance industry standards for WIA insurance products.
 
 ## Generated Diagrams
 
@@ -31,7 +38,7 @@ The UML diagrams in this repository are automatically generated from the domain 
 
 ## Version History
 
-- Version 1.0.0 - 2025-06-23T23:27:54.785Z
+- Version 1.0.0 - 2025-06-23T23:38:00.990Z
 
 ## Integration with Confluence
 
