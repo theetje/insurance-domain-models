@@ -1,0 +1,88 @@
+@startuml
+!theme plain
+
+title WIA Verzekering met Captive Constructie - Domain Model
+note top : Version 1.0.0\nBased on SIVI AFD 2.0\nGenerated: 2025-06-23T22:08:01.713Z
+
+!define DIRECTION top to bottom direction
+
+class WIA Policy <<Policy>> {
+  + contractNumber: string {Unique WIA policy contract number (e.g., WIA2025-001)}
+  + effectiveDate: Date {Policy effective date}
+  + expiryDate: Date {Policy expiry date}
+  + contractDurationInMonths: number {Contract duration in months}
+  + premiumCollector: string {Premium collection frequency (M=Monthly, Q=Quarterly, Y=Yearly)}
+  + collectionMethod: string {Collection method (I=Direct Debit, O=Invoice)}
+  + paymentTermInMonths: number {Payment term in months}
+}
+
+class WIA Party <<Party>> {
+  + partyRole: string {Party role: policyHolder, captive, intermediary, or insurer}
+  + organizationName: string {Organization name}
+  + kvkNumber: string {Dutch Chamber of Commerce number}
+  + street: string {Street name}
+  + number: string {House number}
+  + postalCode: string {Postal code}
+  + city: string {City name}
+}
+
+class WIA Coverage <<Coverage>> {
+  + coverageType: string {Type of WIA coverage}
+  + startDate: Date {Coverage start date}
+  + endDate: Date {Coverage end date}
+  + insuredAmount: number {Maximum insured amount in EUR}
+  + currency: string {Currency of insured amount}
+  + benefitPercentage: number {Benefit percentage for WIA claims}
+}
+
+class Insured Employee  {
+  + bsn: string {Dutch social security number (BSN)}
+  + firstName: string {Employee first name}
+  + lastName: string {Employee last name}
+  + dateOfBirth: Date {Employee date of birth}
+  + gender: string {Employee gender (M/F/X)}
+  + employer: string {Name of the employer}
+}
+
+class WIA Premium <<Premium>> {
+  + amount: number {Premium amount per payment period}
+  + currency: string {Premium currency}
+  + paymentFrequency: string {Payment frequency}
+  + paymentMethod: string {Payment method}
+}
+
+class WIA Claim <<Claim>> {
+  + claimNumber: string {Unique WIA claim number}
+  + claimDate: Date {Date of disability occurrence}
+  + reportDate: Date {Date claim was reported}
+  + disabilityPercentage: number {Assessed disability percentage}
+  - benefitAmount: number {Monthly WIA benefit amount}
+  + status: string {Claim status}
+}
+
+WIA Policy "1..*" o-- "*" coverage : WIA policy includes WIA coverage
+WIA Policy "4" --> "*" party : WIA policy involves policyHolder, captive, intermediary, and insurer
+WIA Policy "1" --> "*" premium : WIA policy has premium information
+WIA Policy "1..*" --> "*" insuredPerson : WIA policy covers one or more employees
+WIA Party "1..*" --> "*" policy : Party participates in WIA policies
+WIA Coverage "1" --> "*" policy : Coverage belongs to WIA policy
+WIA Coverage "1..*" --> "*" insuredPerson : Coverage applies to insured employees
+Insured Employee "1" --> "*" policy : Employee is covered by WIA policy
+Insured Employee "1..*" --> "*" coverage : Employee has WIA coverage
+Insured Employee "0..*" --> "*" claim : Employee may have WIA claims
+WIA Premium "1" --> "*" policy : Premium belongs to WIA policy
+WIA Claim "1" --> "*" policy : WIA claim is made under WIA policy
+WIA Claim "1" --> "*" insuredPerson : WIA claim is made by insured employee
+WIA Claim "1" --> "*" coverage : WIA claim is covered by WIA coverage
+
+skinparam class {
+  BackgroundColor<<Policy>> #e1f5fe
+  BorderColor<<Policy>> #01579b
+  BackgroundColor<<Coverage>> #f3e5f5
+  BorderColor<<Coverage>> #4a148c
+  BackgroundColor<<Party>> #e8f5e8
+  BorderColor<<Party>> #1b5e20
+  BackgroundColor<<Claim>> #fff3e0
+  BorderColor<<Claim>> #e65100
+}
+@enduml

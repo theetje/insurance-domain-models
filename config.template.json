@@ -12,7 +12,7 @@
     "baseUrl": "https://YOUR_ORG.atlassian.net/wiki",
     "username": "YOUR_EMAIL@company.com",
     "apiToken": "YOUR_CONFLUENCE_API_TOKEN", 
-    "spaceKey": "YOUR_SPACE_KEY",
+    "spaceKey": "YOUR_SPACE_KEY_ONLY",
     "pageTitle": "SIVI AFD 2.0 Domain Models",
     "parentPageId": "OPTIONAL_PARENT_PAGE_ID"
   },

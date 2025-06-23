@@ -51,17 +51,29 @@ git remote add origin https://github.com/theetje/insurance-domain-models.git
 
 ### 2. Find Your Confluence Details
 
+**Space Key (Required):**
+1. Go to your Confluence space
+2. Look at the URL: `https://your-company.atlassian.net/wiki/spaces/SPACEKEY/`
+3. The `SPACEKEY` part is what you need (e.g., "MODELS", "DOCS", "TEAM")
+4. **Use ONLY the key, no additional scope needed**
+
+**Alternative way to find Space Key:**
+1. Go to your space → Space Settings → Overview
+2. The space key is displayed there
+
+**Parent Page ID (Optional):**
+1. Go to the parent page → ... menu → View Page Information  
+2. Copy the page ID from the URL (long number like `123456789`)
+
+**Examples:**
 ```bash
-# Your Confluence URL format:
-https://your-company.atlassian.net/wiki
+Space Key: MODELS          # ✅ Correct - just the key
+Space Key: DOCS            # ✅ Correct - just the key  
+Space Key: TEAM            # ✅ Correct - just the key
 
-# Find Space Key:
-# Go to your space → Space Settings → Overview
-# The space key is shown (e.g., "MODELS", "DOCS")
-
-# Find Parent Page ID (optional):
-# Go to the parent page → ... menu → View Page Information
-# Copy the page ID from the URL
+# ❌ Wrong - these include scope/URL parts:
+Space Key: spaces/MODELS   # Don't include "spaces/"
+Space Key: wiki/spaces/MODELS  # Don't include URL parts
 ```
 
 ### 3. Install Required Confluence Apps
@@ -97,6 +109,67 @@ Install these apps from Atlassian Marketplace:
   }
 }
 ```
+
+## 🔍 Quick Troubleshooting
+
+### ✅ Space Key Format Examples
+
+```json
+{
+  "confluence": {
+    "spaceKey": "MODELS"        // ✅ Correct
+  }
+}
+```
+
+```json
+{
+  "confluence": {
+    "spaceKey": "DS"           // ✅ Correct (short keys work too)
+  }
+}
+```
+
+```json
+{
+  "confluence": {
+    "spaceKey": "TEAMDOCS"     // ✅ Correct (longer keys work)
+  }
+}
+```
+
+### ❌ Common Space Key Mistakes
+
+```json
+{
+  "confluence": {
+    "spaceKey": "spaces/MODELS"           // ❌ Wrong - don't include "spaces/"
+  }
+}
+```
+
+```json
+{
+  "confluence": {
+    "spaceKey": "wiki/spaces/MODELS"     // ❌ Wrong - don't include URL parts
+  }
+}
+```
+
+```json
+{
+  "confluence": {
+    "spaceKey": "/wiki/spaces/MODELS/"   // ❌ Wrong - no slashes needed
+  }
+}
+```
+
+### 🔧 API Token vs Space Key
+
+- **API Token**: Your personal Confluence API token for authentication (starts with `ATATT3xFfGF0...`)
+- **Space Key**: Just the space identifier (like `MODELS`, `DOCS`, `TEAM`)
+
+**The API token provides the "scope" - you don't add scope to the space key!**
 
 ## 🚀 Complete Configuration Example
 
