@@ -17,7 +17,7 @@ export class ConfluenceService {
     
     // Create Confluence API client
     this.client = axios.create({
-      baseURL: `${config.baseUrl}/rest/api`,
+      baseURL: `${config.baseUrl}/wiki/rest/api`,
       auth: {
         username: config.username,
         password: config.apiToken
