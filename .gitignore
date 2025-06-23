@@ -106,10 +106,8 @@ ehthumbs.db
 Thumbs.db
 
 # Model Creator specific
-models/
 output/
 generated/
-diagrams/
 docs/generated/
 
 # Configuration files with sensitive data
