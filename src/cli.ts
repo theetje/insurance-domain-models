@@ -451,6 +451,85 @@ program
     }
   });
 
+// Remove model command
+program
+  .command('remove')
+  .description('Remove a domain model')
+  .argument('<model-name>', 'name of the model file to remove (without .model.json)')
+  .option('--force', 'force removal without confirmation')
+  .action(async (modelName, options) => {
+    try {
+      const modelCreator = new ModelCreator();
+      await modelCreator.initialize(program.opts().config);
+
+      // Add .model.json extension if not present
+      const modelFile = modelName.endsWith('.model.json') ? modelName : `${modelName}.model.json`;
+      
+      logger.info(`Removing domain model: ${modelFile}`);
+
+      // Check if model exists
+      const models = await modelCreator.listDomainModels();
+      if (!models.includes(modelFile)) {
+        logger.error(`Model not found: ${modelFile}`);
+        console.log('Available models:');
+        models.forEach(model => console.log(`  - ${model}`));
+        process.exit(1);
+      }
+
+      // Confirm removal unless --force is used
+      if (!options.force) {
+        const readline = require('readline');
+        const rl = readline.createInterface({
+          input: process.stdin,
+          output: process.stdout
+        });
+
+        const answer = await new Promise<string>((resolve) => {
+          rl.question(`Are you sure you want to remove ${modelFile}? (y/N): `, resolve);
+        });
+        
+        rl.close();
+
+        if (answer.toLowerCase() !== 'y' && answer.toLowerCase() !== 'yes') {
+          logger.info('Removal cancelled');
+          return;
+        }
+      }
+
+      // Remove model and related files
+      const modelPath = path.join(process.cwd(), 'models', modelFile);
+      const diagramName = modelFile.replace('.model.json', '-diagram.mmd');
+      const diagramPath = path.join(process.cwd(), 'diagrams', diagramName);
+
+      // Remove files
+      if (await fs.pathExists(modelPath)) {
+        await fs.remove(modelPath);
+        logger.info(`Removed model: ${modelPath}`);
+      }
+
+      if (await fs.pathExists(diagramPath)) {
+        await fs.remove(diagramPath);
+        logger.info(`Removed diagram: ${diagramPath}`);
+      }
+
+      // Commit changes if Git is configured
+      if (modelCreator.getConfig().git && modelCreator.getConfig().git.repositoryUrl) {
+        try {
+          await modelCreator.commitAndPushChanges(`Remove ${modelFile} and related files`);
+          logger.info('Changes committed and pushed to Git');
+        } catch (error) {
+          logger.warn('Failed to commit changes to Git', error);
+        }
+      }
+
+      logger.info(`Domain model ${modelFile} removed successfully`);
+
+    } catch (error) {
+      logger.error('Failed to remove domain model', error);
+      process.exit(1);
+    }
+  });
+
 // Set up global error handler
 process.on('unhandledRejection', (reason, promise) => {
   logger.error('Unhandled Rejection at:', { promise, reason });
