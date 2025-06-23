@@ -1,0 +1,39 @@
+{
+  "_comment": "Configuration template for Model Creator - Copy to .model-creator.json and fill in your values",
+  "git": {
+    "repositoryUrl": "git@github.com:Hienfeld/insurance-domain-models.git",
+    "branch": "main", 
+    "username": "Hienfeld",
+    "token": "YOUR_GITHUB_PERSONAL_ACCESS_TOKEN",
+    "modelsPath": "models",
+    "outputPath": "diagrams"
+  },
+  "confluence": {
+    "baseUrl": "https://YOUR_ORG.atlassian.net/wiki",
+    "username": "YOUR_EMAIL@company.com",
+    "apiToken": "YOUR_CONFLUENCE_API_TOKEN", 
+    "spaceKey": "YOUR_SPACE_KEY",
+    "pageTitle": "SIVI AFD 2.0 Domain Models",
+    "parentPageId": "OPTIONAL_PARENT_PAGE_ID"
+  },
+  "diagram": {
+    "format": "mermaid",
+    "direction": "TB",
+    "showAttributes": true,
+    "showMethods": false, 
+    "showRelationships": true,
+    "includeMetadata": true
+  },
+  "sivi": {
+    "baseUrl": "https://www.sivi.org/afd",
+    "version": "2.0"
+  },
+  "output": {
+    "directory": "./output",
+    "modelsDirectory": "./models"
+  },
+  "logging": {
+    "level": "info",
+    "file": "./logs/model-creator.log"
+  }
+}
