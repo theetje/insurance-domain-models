@@ -1,10 +1,10 @@
-# WIA Verzekering met Captive Constructie - Domain Model
+# Test WIA Model - Domain Model
 
-SIVI AFS-compliant WIA insurance model with captive structure including organization, captive, intermediary (Meijers), and insurer (Hienfeld)
+Test to check Confluence sync with fixed labels
 
 ## Overview
 
-This repository contains the domain model for WIA Verzekering met Captive Constructie, built using the SIVI AFD 2.0 standard for Dutch insurance industry.
+This repository contains the domain model for Test WIA Model, built using the SIVI AFD 2.0 standard for Dutch insurance industry.
 
 ## Structure
 
@@ -31,7 +31,7 @@ The UML diagrams in this repository are automatically generated from the domain 
 
 ## Version History
 
-- Version 1.0.0 - 2025-06-23T23:41:46.485Z
+- Version 1.0.0 - 2025-06-23T23:47:24.864Z
 
 ## Integration with Confluence
 
