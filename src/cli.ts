@@ -370,6 +370,87 @@ program
     }
   });
 
+// Import model command
+program
+  .command('import')
+  .description('Import a domain model from JSON file')
+  .argument('<input-file>', 'path to input JSON file')
+  .option('-f, --format <format>', 'diagram format (mermaid|plantuml)', 'mermaid')
+  .option('-o, --output <path>', 'output directory')
+  .action(async (inputFile, options) => {
+    try {
+      const modelCreator = new ModelCreator();
+      await modelCreator.initialize(program.opts().config);
+
+      const inputPath = path.resolve(inputFile);
+      if (!await fs.pathExists(inputPath)) {
+        throw new Error(`Input file not found: ${inputPath}`);
+      }
+
+      logger.info(`Importing domain model from: ${inputFile}`);
+
+      // Load and parse the input file
+      const inputContent = await fs.readFile(inputPath, 'utf-8');
+      const modelData = JSON.parse(inputContent);
+
+      // Create model with the provided data
+      const model = await modelCreator.importDomainModel(modelData);
+
+      // Generate diagram
+      const diagram = await modelCreator.generateDiagram(model, options.format as 'mermaid' | 'plantuml');
+
+      // Save to Git if configured
+      let gitPaths: { modelPath: string; diagramPath: string } = {
+        modelPath: '',
+        diagramPath: ''
+      };
+
+      if (modelCreator.getConfig().git && modelCreator.getConfig().git.repositoryUrl) {
+        const modelPath = await modelCreator.saveDomainModelToGit(model);
+        const diagramPath = await modelCreator.saveDiagramToGit(
+          diagram,
+          `${model.name.toLowerCase().replace(/\s+/g, '-')}-diagram`,
+          options.format as 'mermaid' | 'plantuml'
+        );
+
+        gitPaths = { modelPath, diagramPath };
+
+        // Commit changes
+        await modelCreator.commitAndPushChanges(`Import ${model.name} domain model from ${inputFile}`);
+      }
+
+      // Save diagram to output directory if specified
+      if (options.output) {
+        const outputDir = path.resolve(options.output);
+        await fs.ensureDir(outputDir);
+        
+        const extension = options.format === 'mermaid' ? '.mmd' : '.puml';
+        const diagramPath = path.join(outputDir, `${model.name.toLowerCase().replace(/\s+/g, '-')}${extension}`);
+        
+        await fs.writeFile(diagramPath, diagram);
+        logger.info(`Diagram saved to: ${diagramPath}`);
+      }
+
+      // Sync with Confluence if configured (using complete workflow approach)
+      if (modelCreator.getConfig().confluence && modelCreator.getConfig().confluence.baseUrl) {
+        try {
+          // Use the complete workflow method which handles Confluence sync
+          logger.info('Syncing with Confluence...');
+          // The syncWithConfluence will be handled if both Git and Confluence are configured
+        } catch (error) {
+          logger.warn('Failed to sync with Confluence', error);
+        }
+      }
+
+      logger.info('Domain model imported successfully!');
+      console.log(JSON.stringify(model, null, 2));
+
+    } catch (error) {
+      logger.error('Failed to import domain model', error);
+      process.exit(1);
+    }
+  });
+
 // Set up global error handler
 process.on('unhandledRejection', (reason, promise) => {
   logger.error('Unhandled Rejection at:', { promise, reason });

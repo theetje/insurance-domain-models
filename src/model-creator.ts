@@ -106,6 +106,36 @@ export class ModelCreator {
   }
 
   /**
+   * Import domain model from structured data
+   */
+  async importDomainModel(modelData: any): Promise<DomainModel> {
+    try {
+      this.logger.info(`Importing domain model: ${modelData.name}`);
+      
+      // Create the model from the provided data
+      const model: DomainModel = {
+        ...modelData,
+        metadata: {
+          created: new Date().toISOString(),
+          updated: new Date().toISOString(),
+          author: 'SIVI AFD 2.0 Model Creator',
+          siviVersion: '2.0'
+        }
+      };
+      
+      // Validate the model
+      this.siviService.validateDomainModel(model);
+      
+      this.logger.info(`Domain model imported successfully: ${model.name}`);
+      return model;
+    } catch (error) {
+      const message = `Failed to import domain model: ${error instanceof Error ? error.message : 'Unknown error'}`;
+      this.logger.error(message, error);
+      throw new ModelCreatorError(message, 'MODEL_IMPORT_ERROR', error);
+    }
+  }
+
+  /**
    * Generate UML diagram from domain model
    */
   async generateDiagram(
