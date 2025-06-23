@@ -1,0 +1,81 @@
+classDiagram
+
+    %% Domain Model: WIA Verzekering met Captive Constructie
+    %% Version: 1.0.0
+    %% Generated: 2025-06-23T23:50:52.615Z
+    %% Based on SIVI AFD 2.0
+
+    class Policy {
+        +contractNumber: string // Unique policy contract number
+        +effectiveDate: Date // Policy effective date
+        +expirationDate: Date // Policy expiration date
+        +status: string // Policy status
+        +policyType: string // Type of insurance policy
+        -premium: number // Policy premium amount
+    }
+
+    class Coverage {
+        +coverageCode: string // Coverage type code
+        +description: string // Coverage description
+        -limit: number // Coverage limit amount
+        -deductible: number // Coverage deductible amount
+        -premium: number // Coverage premium
+    }
+
+    class Party {
+        +partyId: string // Unique party identifier
+        +role: string // Party role (Insured, Insurer, Broker, etc.)
+        +name: string // Party name
+        -address: string // Party address
+        -contactInfo: string // Party contact information
+    }
+
+    class Claim {
+        +claimNumber: string // Unique claim number
+        +claimDate: Date // Claim occurrence date
+        +reportDate: Date // Claim report date
+        +status: string // Claim status
+        -amount: number // Claim amount
+        -description: string // Claim description
+    }
+
+    class Premium {
+        +amount: number // Premium amount
+        +currency: string // Premium currency
+        +paymentFrequency: string // Payment frequency
+        -dueDate: Date // Premium due date
+    }
+
+    class Object {
+        +objectId: string // Unique object identifier
+        +type: string // Object type
+        -description: string // Object description
+        -value: number // Object value
+        -location: string // Object location
+    }
+
+    class Clause {
+        +clauseId: string // Unique clause identifier
+        +type: string // Clause type
+        +description: string // Clause description
+        -text: string // Full clause text
+    }
+
+    Policy "1..*" --o "*" coverage : Policy includes one or more coverages
+    Policy "1..*" --> "*" party : Policy involves multiple parties
+    Policy "1" --> "*" premium : Policy has premium information
+    Coverage "0..*" --> "*" object : Coverage may apply to insured objects
+    Coverage "0..*" --> "*" clause : Coverage may have specific clauses
+    Claim "1" --> "*" policy : Claim is associated with a policy
+    Claim "1..*" --> "*" coverage : Claim affects one or more coverages
+
+    %% Styling for SIVI AFD entities
+    classDef policyClass fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    classDef coverageClass fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    classDef partyClass fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
+    classDef claimClass fill:#fff3e0,stroke:#e65100,stroke-width:2px
+
+    class Policy policyClass
+    class Coverage coverageClass
+    class Party partyClass
+    class Claim claimClass

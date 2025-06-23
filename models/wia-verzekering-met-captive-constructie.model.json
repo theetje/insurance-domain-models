@@ -1,0 +1,381 @@
+{
+  "name": "WIA Verzekering met Captive Constructie",
+  "version": "1.0.0",
+  "description": "SIVI AFS-compliant WIA insurance model with captive structure including organization, captive, intermediary (Meijers), and insurer (Hienfeld)",
+  "namespace": "nl.sivi.afd.insurance",
+  "entities": [
+    {
+      "id": "policy",
+      "name": "Policy",
+      "description": "Insurance policy/contract entity",
+      "type": "Policy",
+      "attributes": [
+        {
+          "name": "contractNumber",
+          "type": "string",
+          "required": true,
+          "description": "Unique policy contract number",
+          "siviReference": "AFD.Policy.ContractNumber"
+        },
+        {
+          "name": "effectiveDate",
+          "type": "Date",
+          "required": true,
+          "description": "Policy effective date",
+          "siviReference": "AFD.Policy.EffectiveDate"
+        },
+        {
+          "name": "expirationDate",
+          "type": "Date",
+          "required": true,
+          "description": "Policy expiration date",
+          "siviReference": "AFD.Policy.ExpirationDate"
+        },
+        {
+          "name": "status",
+          "type": "string",
+          "required": true,
+          "description": "Policy status",
+          "siviReference": "AFD.Policy.Status"
+        },
+        {
+          "name": "policyType",
+          "type": "string",
+          "required": true,
+          "description": "Type of insurance policy",
+          "siviReference": "AFD.Policy.Type"
+        },
+        {
+          "name": "premium",
+          "type": "number",
+          "required": false,
+          "description": "Policy premium amount",
+          "siviReference": "AFD.Policy.Premium"
+        }
+      ],
+      "relationships": [
+        {
+          "type": "aggregation",
+          "target": "coverage",
+          "cardinality": "1..*",
+          "description": "Policy includes one or more coverages"
+        },
+        {
+          "type": "association",
+          "target": "party",
+          "cardinality": "1..*",
+          "description": "Policy involves multiple parties"
+        },
+        {
+          "type": "association",
+          "target": "premium",
+          "cardinality": "1",
+          "description": "Policy has premium information"
+        }
+      ],
+      "siviReference": "AFD.Policy",
+      "version": "2.0"
+    },
+    {
+      "id": "coverage",
+      "name": "Coverage",
+      "description": "Insurance coverage details",
+      "type": "Coverage",
+      "attributes": [
+        {
+          "name": "coverageCode",
+          "type": "string",
+          "required": true,
+          "description": "Coverage type code",
+          "siviReference": "AFD.Coverage.Code"
+        },
+        {
+          "name": "description",
+          "type": "string",
+          "required": true,
+          "description": "Coverage description",
+          "siviReference": "AFD.Coverage.Description"
+        },
+        {
+          "name": "limit",
+          "type": "number",
+          "required": false,
+          "description": "Coverage limit amount",
+          "siviReference": "AFD.Coverage.Limit"
+        },
+        {
+          "name": "deductible",
+          "type": "number",
+          "required": false,
+          "description": "Coverage deductible amount",
+          "siviReference": "AFD.Coverage.Deductible"
+        },
+        {
+          "name": "premium",
+          "type": "number",
+          "required": false,
+          "description": "Coverage premium",
+          "siviReference": "AFD.Coverage.Premium"
+        }
+      ],
+      "relationships": [
+        {
+          "type": "association",
+          "target": "object",
+          "cardinality": "0..*",
+          "description": "Coverage may apply to insured objects"
+        },
+        {
+          "type": "association",
+          "target": "clause",
+          "cardinality": "0..*",
+          "description": "Coverage may have specific clauses"
+        }
+      ],
+      "siviReference": "AFD.Coverage",
+      "version": "2.0"
+    },
+    {
+      "id": "party",
+      "name": "Party",
+      "description": "Parties involved in insurance policy",
+      "type": "Party",
+      "attributes": [
+        {
+          "name": "partyId",
+          "type": "string",
+          "required": true,
+          "description": "Unique party identifier",
+          "siviReference": "AFD.Party.Id"
+        },
+        {
+          "name": "role",
+          "type": "string",
+          "required": true,
+          "description": "Party role (Insured, Insurer, Broker, etc.)",
+          "siviReference": "AFD.Party.Role"
+        },
+        {
+          "name": "name",
+          "type": "string",
+          "required": true,
+          "description": "Party name",
+          "siviReference": "AFD.Party.Name"
+        },
+        {
+          "name": "address",
+          "type": "string",
+          "required": false,
+          "description": "Party address",
+          "siviReference": "AFD.Party.Address"
+        },
+        {
+          "name": "contactInfo",
+          "type": "string",
+          "required": false,
+          "description": "Party contact information",
+          "siviReference": "AFD.Party.Contact"
+        }
+      ],
+      "relationships": [],
+      "siviReference": "AFD.Party",
+      "version": "2.0"
+    },
+    {
+      "id": "claim",
+      "name": "Claim",
+      "description": "Insurance claim entity",
+      "type": "Claim",
+      "attributes": [
+        {
+          "name": "claimNumber",
+          "type": "string",
+          "required": true,
+          "description": "Unique claim number",
+          "siviReference": "AFD.Claim.Number"
+        },
+        {
+          "name": "claimDate",
+          "type": "Date",
+          "required": true,
+          "description": "Claim occurrence date",
+          "siviReference": "AFD.Claim.Date"
+        },
+        {
+          "name": "reportDate",
+          "type": "Date",
+          "required": true,
+          "description": "Claim report date",
+          "siviReference": "AFD.Claim.ReportDate"
+        },
+        {
+          "name": "status",
+          "type": "string",
+          "required": true,
+          "description": "Claim status",
+          "siviReference": "AFD.Claim.Status"
+        },
+        {
+          "name": "amount",
+          "type": "number",
+          "required": false,
+          "description": "Claim amount",
+          "siviReference": "AFD.Claim.Amount"
+        },
+        {
+          "name": "description",
+          "type": "string",
+          "required": false,
+          "description": "Claim description",
+          "siviReference": "AFD.Claim.Description"
+        }
+      ],
+      "relationships": [
+        {
+          "type": "association",
+          "target": "policy",
+          "cardinality": "1",
+          "description": "Claim is associated with a policy"
+        },
+        {
+          "type": "association",
+          "target": "coverage",
+          "cardinality": "1..*",
+          "description": "Claim affects one or more coverages"
+        }
+      ],
+      "siviReference": "AFD.Claim",
+      "version": "2.0"
+    },
+    {
+      "id": "premium",
+      "name": "Premium",
+      "description": "Insurance premium information",
+      "type": "Premium",
+      "attributes": [
+        {
+          "name": "amount",
+          "type": "number",
+          "required": true,
+          "description": "Premium amount",
+          "siviReference": "AFD.Premium.Amount"
+        },
+        {
+          "name": "currency",
+          "type": "string",
+          "required": true,
+          "description": "Premium currency",
+          "siviReference": "AFD.Premium.Currency"
+        },
+        {
+          "name": "paymentFrequency",
+          "type": "string",
+          "required": true,
+          "description": "Payment frequency",
+          "siviReference": "AFD.Premium.Frequency"
+        },
+        {
+          "name": "dueDate",
+          "type": "Date",
+          "required": false,
+          "description": "Premium due date",
+          "siviReference": "AFD.Premium.DueDate"
+        }
+      ],
+      "relationships": [],
+      "siviReference": "AFD.Premium",
+      "version": "2.0"
+    },
+    {
+      "id": "object",
+      "name": "Object",
+      "description": "Insured object/item",
+      "type": "Object",
+      "attributes": [
+        {
+          "name": "objectId",
+          "type": "string",
+          "required": true,
+          "description": "Unique object identifier",
+          "siviReference": "AFD.Object.Id"
+        },
+        {
+          "name": "type",
+          "type": "string",
+          "required": true,
+          "description": "Object type",
+          "siviReference": "AFD.Object.Type"
+        },
+        {
+          "name": "description",
+          "type": "string",
+          "required": false,
+          "description": "Object description",
+          "siviReference": "AFD.Object.Description"
+        },
+        {
+          "name": "value",
+          "type": "number",
+          "required": false,
+          "description": "Object value",
+          "siviReference": "AFD.Object.Value"
+        },
+        {
+          "name": "location",
+          "type": "string",
+          "required": false,
+          "description": "Object location",
+          "siviReference": "AFD.Object.Location"
+        }
+      ],
+      "relationships": [],
+      "siviReference": "AFD.Object",
+      "version": "2.0"
+    },
+    {
+      "id": "clause",
+      "name": "Clause",
+      "description": "Policy clause or condition",
+      "type": "Clause",
+      "attributes": [
+        {
+          "name": "clauseId",
+          "type": "string",
+          "required": true,
+          "description": "Unique clause identifier",
+          "siviReference": "AFD.Clause.Id"
+        },
+        {
+          "name": "type",
+          "type": "string",
+          "required": true,
+          "description": "Clause type",
+          "siviReference": "AFD.Clause.Type"
+        },
+        {
+          "name": "description",
+          "type": "string",
+          "required": true,
+          "description": "Clause description",
+          "siviReference": "AFD.Clause.Description"
+        },
+        {
+          "name": "text",
+          "type": "string",
+          "required": false,
+          "description": "Full clause text",
+          "siviReference": "AFD.Clause.Text"
+        }
+      ],
+      "relationships": [],
+      "siviReference": "AFD.Clause",
+      "version": "2.0"
+    }
+  ],
+  "metadata": {
+    "created": "2025-06-23T23:50:52.613Z",
+    "updated": "2025-06-23T23:50:52.613Z",
+    "author": "SIVI AFD 2.0 Model Creator",
+    "siviVersion": "2.0"
+  }
+}
