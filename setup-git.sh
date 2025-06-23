@@ -20,8 +20,8 @@ if git remote get-url origin > /dev/null 2>&1; then
     echo "✅ Remote origin already configured: $(git remote get-url origin)"
 else
     echo "🔧 Adding remote origin..."
-    git remote add origin git@github.com:Hienfeld/insurance-domain-models.git
-    echo "✅ Remote origin added: git@github.com:Hienfeld/insurance-domain-models.git"
+    git remote add origin https://github.com/theetje/insurance-domain-models.git
+    echo "✅ Remote origin added: https://github.com/theetje/insurance-domain-models.git"
 fi
 
 # Create necessary directories

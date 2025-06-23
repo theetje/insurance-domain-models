@@ -1,9 +1,9 @@
 {
   "_comment": "Configuration template for Model Creator - Copy to .model-creator.json and fill in your values",
   "git": {
-    "repositoryUrl": "git@github.com:Hienfeld/insurance-domain-models.git",
+    "repositoryUrl": "https://github.com/theetje/insurance-domain-models.git",
     "branch": "main", 
-    "username": "Hienfeld",
+    "username": "theetje",
     "token": "YOUR_GITHUB_PERSONAL_ACCESS_TOKEN",
     "modelsPath": "models",
     "outputPath": "diagrams"

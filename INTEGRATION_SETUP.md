@@ -12,7 +12,7 @@ First, create a repository for your domain models:
 
 # Option B: Create locally and push (✅ You've done this!)
 git init
-git remote add origin git@github.com:Hienfeld/insurance-domain-models.git
+git remote add origin https://github.com/theetje/insurance-domain-models.git
 ```
 
 ### 2. Configure Git Authentication
@@ -31,9 +31,9 @@ git remote add origin git@github.com:Hienfeld/insurance-domain-models.git
 ```json
 {
   "git": {
-    "repositoryUrl": "git@github.com:Hienfeld/insurance-domain-models.git",
+    "repositoryUrl": "https://github.com/theetje/insurance-domain-models.git",
     "branch": "main",
-    "username": "Hienfeld",
+    "username": "theetje",
     "token": "ghp_your_personal_access_token",
     "modelsPath": "models",
     "outputPath": "diagrams"
@@ -105,9 +105,9 @@ Save this as `model-creator.config.json`:
 ```json
 {
   "git": {
-    "repositoryUrl": "git@github.com:Hienfeld/insurance-domain-models.git",
+    "repositoryUrl": "https://github.com/theetje/insurance-domain-models.git",
     "branch": "main",
-    "username": "Hienfeld",
+    "username": "theetje",
     "token": "ghp_your_github_token_here",
     "modelsPath": "models",
     "outputPath": "diagrams"
