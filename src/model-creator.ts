@@ -266,7 +266,7 @@ export class ModelCreator {
       // Add labels for better organization
       const labels = [
         'domain-model',
-        'sivi-afd-2.0',
+        'sivi-afd-20',
         'uml',
         diagramFormat,
         'insurance'
