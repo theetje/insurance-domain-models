@@ -341,6 +341,82 @@ program
     }
   });
 
+// Comprehensive sync command
+program
+  .command('sync-all')
+  .description('Comprehensive sync: Create Confluence index page with subpages for all models')
+  .option('-i, --input-dir <path>', 'directory containing input model files', './inputs')
+  .option('--dry-run', 'show what would be done without executing')
+  .action(async (options) => {
+    try {
+      const modelCreator = new ModelCreator();
+      await modelCreator.initialize(program.opts().config);
+
+      if (options.dryRun) {
+        getLogger().info(`[DRY RUN] Would sync all models from: ${options.inputDir}`);
+        
+        const fs = require('fs-extra');
+        const path = require('path');
+        const inputDir = path.resolve(options.inputDir);
+        
+        if (!await fs.pathExists(inputDir)) {
+          throw new Error(`Input directory not found: ${inputDir}`);
+        }
+
+        const inputFiles = await fs.readdir(inputDir);
+        const jsonFiles = inputFiles.filter((file: string) => file.endsWith('.json'));
+        
+        console.log(`\n📋 Found ${jsonFiles.length} input files:`);
+        jsonFiles.forEach((file: string) => console.log(`   - ${file}`));
+        
+        console.log('\n🎯 Would create:');
+        console.log('   - 1 Confluence index page: "Domain Models - SIVI AFD 2.0 Index"');
+        console.log(`   - ${jsonFiles.length} individual model pages (as subpages)`);
+        console.log(`   - Git commits for ${jsonFiles.length} models and diagrams`);
+        
+        return;
+      }
+
+      getLogger().info('Starting comprehensive sync of all models...');
+
+      const result = await modelCreator.syncAllModelsFromInputs(options.inputDir);
+
+      console.log('\n🎉 Comprehensive Sync Completed!');
+      console.log('\n📖 Confluence Structure Created:');
+      console.log(`   Index Page ID: ${result.indexPageId}`);
+      console.log(`   Model Pages: ${result.modelPages.length}`);
+      
+      console.log('\n📋 Model Pages:');
+      result.modelPages.forEach(page => {
+        console.log(`   ✅ ${page.name}`);
+        console.log(`      Page ID: ${page.pageId}`);
+        console.log(`      Version: ${page.version}`);
+        console.log(`      Input File: ${page.inputFile}`);
+        console.log(`      Git Model: ${page.gitPaths.modelPath}`);
+        console.log(`      Git Diagram: ${page.gitPaths.diagramPath}`);
+        console.log('');
+      });
+
+      if (result.errors.length > 0) {
+        console.log('⚠️  Errors:');
+        result.errors.forEach(error => {
+          console.log(`   ❌ ${error.file}: ${error.error}`);
+        });
+      }
+
+      console.log(`\n📊 Summary:`);
+      console.log(`   Total Success: ${result.modelPages.length}`);
+      console.log(`   Total Errors: ${result.errors.length}`);
+      console.log(`   Confluence Index: ${result.indexPageId}`);
+
+      getLogger().info('Comprehensive sync completed successfully!');
+
+    } catch (error) {
+      getLogger().error('Failed to perform comprehensive sync', error);
+      process.exit(1);
+    }
+  });
+
 // Status command
 program
   .command('status')
@@ -1186,7 +1262,7 @@ Each JSON file should contain a domain model with the following structure:
       "type": "Policy|Coverage|Party|Claim|Premium|Object|Clause",
       "attributes": [...],
       "relationships": [...],
-      "siviReference": "AFD.Entity",
+      "siviReference": "AFD.EntityType",
       "version": "2.0"
     }
   ]

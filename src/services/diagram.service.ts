@@ -47,7 +47,7 @@ export class DiagramService {
       lines.push(`    %% Domain Model: ${model.name}`);
       lines.push(`    %% Version: ${model.version}`);
       lines.push(`    %% Generated: ${new Date().toISOString()}`);
-      lines.push(`    %% Based on SIVI AFD ${model.metadata.siviVersion}`);
+      lines.push(`    %% Based on SIVI AFD ${model.metadata?.siviVersion || '2.0'}`);
       lines.push('');
     }
 

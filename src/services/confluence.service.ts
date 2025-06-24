@@ -209,7 +209,7 @@ export class ConfluenceService {
   /**
    * Create a new page
    */
-  private async createPage(title: string, content: string): Promise<string> {
+  private async createPage(title: string, content: string, parentPageId?: string): Promise<string> {
     const pageData = {
       type: 'page',
       title,
@@ -225,7 +225,9 @@ export class ConfluenceService {
     };
 
     // Add parent page if specified
-    if (this.config.parentPageId) {
+    if (parentPageId) {
+      (pageData as any).ancestors = [{ id: parentPageId }];
+    } else if (this.config.parentPageId) {
       (pageData as any).ancestors = [{ id: this.config.parentPageId }];
     }
 
@@ -815,6 +817,299 @@ It provides standardized definitions for insurance entities, attributes, and rel
         this.logger.warn('Failed to cleanup temporary files', cleanupError);
       }
       throw error;
+    }
+  }
+
+  /**
+   * Create individual model page with unique title to avoid conflicts
+   */
+  async createIndividualModelPage(
+    model: DomainModel,
+    diagramContent: string,
+    diagramFormat: 'mermaid' | 'plantuml',
+    gitFileUrls: {
+      modelUrl: string;
+      diagramUrl: string;
+    },
+    parentPageId?: string
+  ): Promise<string> {
+    try {
+      // Create unique page title to avoid conflicts
+      const pageTitle = `${model.name} - SIVI AFD 2.0 Model`;
+      this.logger.info(`Creating/updating individual model page: ${pageTitle}`);
+
+      // Generate page content
+      const pageContent = await this.generatePageContent(
+        model,
+        diagramContent,
+        diagramFormat,
+        gitFileUrls,
+        '' // pageId will be set after creation
+      );
+
+      // Check if page already exists
+      const existingPage = await this.findPageByTitle(pageTitle);
+      
+      let pageId: string;
+      if (existingPage) {
+        pageId = await this.updatePage(existingPage.id, pageTitle, pageContent, existingPage.version.number + 1);
+        this.logger.info(`Updated existing model page: ${pageTitle} (ID: ${pageId})`);
+      } else {
+        pageId = await this.createPage(pageTitle, pageContent, parentPageId);
+        this.logger.info(`Created new model page: ${pageTitle} (ID: ${pageId})`);
+      }
+
+      // Add labels for better organization
+      const labels = [
+        'domainmodel',
+        'siviafd20',
+        'uml',
+        diagramFormat,
+        'insurance',
+        model.name.toLowerCase().replace(/\s+/g, '-')
+      ];
+      
+      try {
+        await this.addLabelsToPage(pageId, labels);
+      } catch (error) {
+        this.logger.warn(`Failed to add labels to page ${pageId}`, error);
+      }
+
+      return pageId;
+    } catch (error) {
+      const message = `Failed to create individual model page: ${error instanceof Error ? error.message : 'Unknown error'}`;
+      this.logger.error(message, error);
+      throw new ConfluenceIntegrationError(message, error);
+    }
+  }
+
+  /**
+   * Comprehensive sync: Create index page and individual pages for all models
+   */
+  async syncAllModels(
+    models: Array<{
+      model: DomainModel;
+      diagram: string;
+      diagramFormat: 'mermaid' | 'plantuml';
+      gitFileUrls: {
+        modelUrl: string;
+        diagramUrl: string;
+      };
+    }>
+  ): Promise<{
+    indexPageId: string;
+    modelPages: Array<{
+      name: string;
+      pageId: string;
+      version: string;
+      lastUpdated: string;
+    }>;
+  }> {
+    try {
+      this.logger.info(`Starting comprehensive sync for ${models.length} models`);
+
+      // First, create or update individual model pages
+      const modelPages = [];
+      
+      for (const { model, diagram, diagramFormat, gitFileUrls } of models) {
+        this.logger.info(`Processing model: ${model.name}`);
+        
+        const pageId = await this.createIndividualModelPage(
+          model,
+          diagram,
+          diagramFormat,
+          gitFileUrls
+        );
+
+        modelPages.push({
+          name: model.name,
+          pageId: pageId,
+          version: model.version,
+          lastUpdated: new Date().toISOString()
+        });
+
+        this.logger.info(`✅ ${model.name} → Page ID: ${pageId}`);
+      }
+
+      // Create or update index page linking to all model pages
+      const indexPageId = await this.createModelIndexPage(modelPages);
+
+      // Set parent-child relationships (make model pages children of index page)
+      await this.establishPageHierarchy(indexPageId, modelPages.map(mp => mp.pageId));
+
+      this.logger.info(`Comprehensive sync completed. Index page: ${indexPageId}, Model pages: ${modelPages.length}`);
+
+      return {
+        indexPageId,
+        modelPages
+      };
+    } catch (error) {
+      const message = `Failed to sync all models: ${error instanceof Error ? error.message : 'Unknown error'}`;
+      this.logger.error(message, error);
+      throw new ConfluenceIntegrationError(message, error);
+    }
+  }
+
+  /**
+   * Establish parent-child relationships between pages
+   */
+  async establishPageHierarchy(parentPageId: string, childPageIds: string[]): Promise<void> {
+    try {
+      this.logger.info(`Establishing page hierarchy: ${childPageIds.length} children under ${parentPageId}`);
+
+      for (const childPageId of childPageIds) {
+        try {
+          // Get child page details
+          const childPage = await this.getPageContent(childPageId);
+          
+          if (childPage) {
+            // Update child page to set parent
+            const updateData = {
+              id: childPageId,
+              type: 'page',
+              title: childPage.title,
+              space: {
+                key: this.config.spaceKey
+              },
+              ancestors: [
+                {
+                  id: parentPageId
+                }
+              ],
+              version: {
+                number: childPage.version.number + 1
+              },
+              body: childPage.body
+            };
+
+            await this.client.put(`/rest/api/content/${childPageId}`, updateData);
+            this.logger.info(`Set parent for page ${childPageId} → ${parentPageId}`);
+          }
+        } catch (error) {
+          this.logger.warn(`Failed to set parent for page ${childPageId}`, error);
+        }
+      }
+    } catch (error) {
+      this.logger.error('Failed to establish page hierarchy', error);
+      // Don't throw - hierarchy is nice to have but not critical
+    }
+  }
+
+  /**
+   * Bulk update all model pages from input directory
+   */
+  async bulkSyncFromInputs(
+    inputDirectory: string,
+    generateDiagramFn: (model: DomainModel) => Promise<string>,
+    buildGitUrlsFn: (modelPath: string, diagramPath: string) => { modelUrl: string; diagramUrl: string }
+  ): Promise<{
+    indexPageId: string;
+    modelPages: Array<{
+      name: string;
+      pageId: string;
+      version: string;
+      lastUpdated: string;
+      inputFile: string;
+    }>;
+    errors: Array<{
+      file: string;
+      error: string;
+    }>;
+  }> {
+    try {
+      this.logger.info(`Starting bulk sync from directory: ${inputDirectory}`);
+
+      const fs = require('fs-extra');
+      const path = require('path');
+
+      // Find all JSON files in input directory
+      const inputFiles = await fs.readdir(inputDirectory);
+      const jsonFiles = inputFiles.filter((file: string) => file.endsWith('.json'));
+
+      this.logger.info(`Found ${jsonFiles.length} input files`);
+
+      const models: Array<{
+        model: DomainModel;
+        diagram: string;
+        diagramFormat: 'mermaid';
+        gitFileUrls: { modelUrl: string; diagramUrl: string };
+        inputFile: string;
+      }> = [];
+      const errors: Array<{ file: string; error: string }> = [];
+
+      // Process each input file
+      for (const jsonFile of jsonFiles) {
+        try {
+          const inputPath = path.join(inputDirectory, jsonFile);
+          const inputContent = await fs.readFile(inputPath, 'utf-8');
+          const inputModel = JSON.parse(inputContent);
+
+          // Convert input model to complete domain model with metadata
+          const model: DomainModel = {
+            ...inputModel,
+            metadata: inputModel.metadata || {
+              created: new Date().toISOString(),
+              updated: new Date().toISOString(),
+              author: 'Model Creator',
+              siviVersion: '2.0'
+            }
+          };
+
+          // Generate diagram
+          const diagram = await generateDiagramFn(model);
+
+          // Build Git URLs (assuming files are saved to standard paths)
+          const baseName = path.basename(jsonFile, '.json');
+          const modelPath = `models/${baseName}.model.json`;
+          const diagramPath = `diagrams/${baseName}-diagram.mmd`;
+          const gitFileUrls = buildGitUrlsFn(modelPath, diagramPath);
+
+          models.push({
+            model,
+            diagram,
+            diagramFormat: 'mermaid' as const,
+            gitFileUrls,
+            inputFile: jsonFile
+          });
+
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          this.logger.error(`Failed to process ${jsonFile}`, error);
+          errors.push({
+            file: jsonFile,
+            error: errorMessage
+          });
+        }
+      }
+
+      if (models.length === 0) {
+        throw new Error('No valid models found to sync');
+      }
+
+      // Sync all models
+      const syncResult = await this.syncAllModels(models);
+
+      // Add input file information to result
+      const modelPagesWithInputs = syncResult.modelPages.map(page => {
+        const matchingModel = models.find(m => m.model.name === page.name);
+        return {
+          ...page,
+          inputFile: matchingModel?.inputFile || 'unknown'
+        };
+      });
+
+      this.logger.info(`Bulk sync completed. Success: ${models.length}, Errors: ${errors.length}`);
+
+      return {
+        indexPageId: syncResult.indexPageId,
+        modelPages: modelPagesWithInputs,
+        errors
+      };
+
+    } catch (error) {
+      const message = `Failed to bulk sync from inputs: ${error instanceof Error ? error.message : 'Unknown error'}`;
+      this.logger.error(message, error);
+      throw new ConfluenceIntegrationError(message, error);
     }
   }
 }
