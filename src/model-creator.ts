@@ -263,10 +263,10 @@ export class ModelCreator {
         gitFileUrls
       );
 
-      // Add labels for better organization
+      // Add labels for better organization (no hyphens allowed in Confluence labels)
       const labels = [
-        'domain-model',
-        'sivi-afd-20',
+        'domainmodel',
+        'siviafd20',
         'uml',
         diagramFormat,
         'insurance'
@@ -492,26 +492,39 @@ export class ModelCreator {
   }
 
   /**
-   * Build Git file URL for embedding in Confluence
+   * Build Git file URL for GitHub/GitLab integration
    */
   private buildGitFileUrl(filePath: string): string {
-    if (!this.config.git.repositoryUrl || !filePath) {
+    if (!this.config.git.repositoryUrl) {
       return '';
     }
 
-    const repoUrl = this.config.git.repositoryUrl;
+    // Convert Git clone URL to web URL
+    let baseUrl = this.config.git.repositoryUrl;
+    
+    // Handle different Git URL formats
+    if (baseUrl.endsWith('.git')) {
+      baseUrl = baseUrl.slice(0, -4);
+    }
+    
+    if (baseUrl.startsWith('git@')) {
+      // Convert SSH to HTTPS: git@github.com:user/repo -> https://github.com/user/repo
+      baseUrl = baseUrl.replace('git@', 'https://').replace(':', '/');
+    }
+    
+    // Extract relative path from absolute path
+    const relativePath = filePath.replace(process.cwd() + '/', '');
+    
+    // Build the raw file URL for GitHub/GitLab
     const branch = this.config.git.branch || 'main';
     
-    // Handle different Git hosting providers
-    if (repoUrl.includes('github.com')) {
-      return `${repoUrl.replace('.git', '')}/blob/${branch}/${filePath.replace(/^\.\//, '')}`;
-    } else if (repoUrl.includes('gitlab.com')) {
-      return `${repoUrl.replace('.git', '')}/-/blob/${branch}/${filePath.replace(/^\.\//, '')}`;
-    } else if (repoUrl.includes('bitbucket.org')) {
-      return `${repoUrl.replace('.git', '')}/src/${branch}/${filePath.replace(/^\.\//, '')}`;
+    if (baseUrl.includes('github.com')) {
+      return `${baseUrl}/blob/${branch}/${relativePath}`;
+    } else if (baseUrl.includes('gitlab.com')) {
+      return `${baseUrl}/-/blob/${branch}/${relativePath}`;
     } else {
-      // Generic Git URL
-      return `${repoUrl}/blob/${branch}/${filePath.replace(/^\.\//, '')}`;
+      // Generic Git web interface
+      return `${baseUrl}/blob/${branch}/${relativePath}`;
     }
   }
 

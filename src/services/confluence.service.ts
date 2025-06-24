@@ -233,6 +233,17 @@ export class ConfluenceService {
 
 ${this.generateDiagramMacro(diagramFormat, gitFileUrls.diagramUrl)}
 
+<ac:structured-macro ac:name="expand" ac:schema-version="1" ac:macro-id="diagram-source-expand">
+  <ac:parameter ac:name="title">📋 View Diagram Source Code</ac:parameter>
+  <ac:rich-text-body>
+    <ac:structured-macro ac:name="code" ac:schema-version="1">
+      <ac:parameter ac:name="language">${diagramFormat}</ac:parameter>
+      <ac:parameter ac:name="title">${diagramFormat.toUpperCase()} Source</ac:parameter>
+      <ac:rich-text-body><![CDATA[${diagramContent}]]></ac:rich-text-body>
+    </ac:structured-macro>
+  </ac:rich-text-body>
+</ac:structured-macro>
+
 <h3>Entity Definitions</h3>
 <p>The model includes the following SIVI AFD 2.0 compliant entities:</p>
 
@@ -325,26 +336,27 @@ ${this.generateDiagramMacro(diagramFormat, gitFileUrls.diagramUrl)}
    */
   private generateDiagramMacro(format: 'mermaid' | 'plantuml', gitUrl: string): string {
     if (format === 'mermaid') {
-      // Using Mermaid Diagrams for Confluence app
+      // Embed Mermaid diagram content directly as code block
       return `
-<ac:structured-macro ac:name="mermaid" ac:schema-version="1" ac:macro-id="domain-model-diagram">
-  <ac:parameter ac:name="theme">default</ac:parameter>
-  <ac:parameter ac:name="gitUrl">${gitUrl}</ac:parameter>
-  <ac:parameter ac:name="autoSync">true</ac:parameter>
+<ac:structured-macro ac:name="code" ac:schema-version="1" ac:macro-id="domain-model-diagram">
+  <ac:parameter ac:name="language">mermaid</ac:parameter>
+  <ac:parameter ac:name="title">Domain Model UML Diagram</ac:parameter>
   <ac:rich-text-body>
-    <p><strong>🔄 Live Diagram:</strong> This Mermaid diagram is automatically updated from the Git repository.</p>
-    <p><a href="${gitUrl}">View diagram source in Git →</a></p>
+    <p><strong>� UML Class Diagram:</strong> This Mermaid diagram shows the complete domain model structure.</p>
+    <p><strong>🔗 Source:</strong> <a href="${gitUrl}">View diagram source in Git →</a></p>
+    <p><em>Note: Install a Mermaid app for Confluence to render this as a visual diagram, or copy the code below into a Mermaid renderer.</em></p>
   </ac:rich-text-body>
 </ac:structured-macro>`;
     } else {
-      // Using PlantUML for Confluence app
+      // Embed PlantUML diagram content directly as code block
       return `
-<ac:structured-macro ac:name="plantuml" ac:schema-version="1" ac:macro-id="domain-model-diagram">
-  <ac:parameter ac:name="url">${gitUrl}</ac:parameter>
-  <ac:parameter ac:name="theme">plain</ac:parameter>
+<ac:structured-macro ac:name="code" ac:schema-version="1" ac:macro-id="domain-model-diagram">
+  <ac:parameter ac:name="language">plantuml</ac:parameter>
+  <ac:parameter ac:name="title">Domain Model UML Diagram</ac:parameter>
   <ac:rich-text-body>
-    <p><strong>🔄 Live Diagram:</strong> This PlantUML diagram is automatically updated from the Git repository.</p>
-    <p><a href="${gitUrl}">View diagram source in Git →</a></p>
+    <p><strong>� UML Class Diagram:</strong> This PlantUML diagram shows the complete domain model structure.</p>
+    <p><strong>🔗 Source:</strong> <a href="${gitUrl}">View diagram source in Git →</a></p>
+    <p><em>Note: Install a PlantUML app for Confluence to render this as a visual diagram, or copy the code below into a PlantUML renderer.</em></p>
   </ac:rich-text-body>
 </ac:structured-macro>`;
     }

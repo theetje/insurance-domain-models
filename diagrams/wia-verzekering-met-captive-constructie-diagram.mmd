@@ -2,72 +2,77 @@ classDiagram
 
     %% Domain Model: WIA Verzekering met Captive Constructie
     %% Version: 1.0.0
-    %% Generated: 2025-06-23T23:50:52.615Z
+    %% Generated: 2025-06-24T15:42:08.585Z
     %% Based on SIVI AFD 2.0
 
-    class Policy {
+    class WIA Policy {
         +contractNumber: string // Unique policy contract number
         +effectiveDate: Date // Policy effective date
-        +expirationDate: Date // Policy expiration date
-        +status: string // Policy status
-        +policyType: string // Type of insurance policy
-        -premium: number // Policy premium amount
-    }
-
-    class Coverage {
-        +coverageCode: string // Coverage type code
-        +description: string // Coverage description
-        -limit: number // Coverage limit amount
-        -deductible: number // Coverage deductible amount
-        -premium: number // Coverage premium
+        +expiryDate: Date // Policy expiry date
+        +contractDurationInMonths: number // Contract duration in months
+        +premiumCollector: string // Premium collection frequency (M=Monthly, Q=Quarterly, Y=Yearly)
+        +collectionMethod: string // Premium collection method (I=Direct Debit, T=Transfer)
+        +paymentTermInMonths: number // Payment term in months
     }
 
     class Party {
-        +partyId: string // Unique party identifier
-        +role: string // Party role (Insured, Insurer, Broker, etc.)
-        +name: string // Party name
-        -address: string // Party address
-        -contactInfo: string // Party contact information
+        +partyRole: string // Role of the party (policyHolder, captive, intermediary, insurer)
+        +organizationName: string // Name of the organization
+        +kvkNumber: string // Dutch Chamber of Commerce number
+        +street: string // Street name
+        +number: string // House number
+        +postalCode: string // Postal code
+        +city: string // City name
     }
 
-    class Claim {
-        +claimNumber: string // Unique claim number
-        +claimDate: Date // Claim occurrence date
-        +reportDate: Date // Claim report date
-        +status: string // Claim status
-        -amount: number // Claim amount
-        -description: string // Claim description
+    class WIA Coverage {
+        +coverageType: string // Type of WIA coverage
+        +startDate: Date // Coverage start date
+        +endDate: Date // Coverage end date
+        +insuredAmount: number // Maximum insured amount in EUR
+        +currency: string // Currency of the insured amount
+        +benefitPercentage: number // Percentage of benefit coverage
     }
 
-    class Premium {
-        +amount: number // Premium amount
+    class Insured Employee {
+        +bsn: string // Dutch social security number (BSN)
+        +firstName: string // First name of the employee
+        +lastName: string // Last name of the employee
+        +dateOfBirth: Date // Date of birth
+        +gender: string // Gender (M=Male, F=Female, X=Other)
+        +employer: string // Name of the employer organization
+    }
+
+    class WIA Premium {
+        +amount: number // Premium amount per payment period
         +currency: string // Premium currency
         +paymentFrequency: string // Payment frequency
-        -dueDate: Date // Premium due date
+        +paymentMethod: string // Payment method
     }
 
-    class Object {
-        +objectId: string // Unique object identifier
-        +type: string // Object type
-        -description: string // Object description
-        -value: number // Object value
-        -location: string // Object location
+    class WIA Claim {
+        +claimNumber: string // Unique WIA claim number
+        +incidentDate: Date // Date of the disability incident
+        +reportDate: Date // Date when claim was reported
+        +status: string // Current claim status
+        -disabilityPercentage: number // Assessed disability percentage
+        -claimAmount: number // Claim payout amount
     }
 
-    class Clause {
-        +clauseId: string // Unique clause identifier
-        +type: string // Clause type
-        +description: string // Clause description
-        -text: string // Full clause text
-    }
-
-    Policy "1..*" --o "*" coverage : Policy includes one or more coverages
-    Policy "1..*" --> "*" party : Policy involves multiple parties
-    Policy "1" --> "*" premium : Policy has premium information
-    Coverage "0..*" --> "*" object : Coverage may apply to insured objects
-    Coverage "0..*" --> "*" clause : Coverage may have specific clauses
-    Claim "1" --> "*" policy : Claim is associated with a policy
-    Claim "1..*" --> "*" coverage : Claim affects one or more coverages
+    WIA Policy "1..*" --o "*" coverage : Policy includes WIA coverage
+    WIA Policy "1..*" --> "*" party : Policy involves multiple parties (policyholder, captive, intermediary, insurer)
+    WIA Policy "1" --> "*" premium : Policy has premium information
+    WIA Policy "1..*" --> "*" insuredPerson : Policy covers multiple employees
+    Party "1..*" --> "*" policy : Party participates in one or more policies
+    WIA Coverage "1" --> "*" policy : Coverage belongs to WIA policy
+    WIA Coverage "1..*" --> "*" insuredPerson : Coverage applies to insured employees
+    Insured Employee "1" --> "*" policy : Employee is covered by WIA policy
+    Insured Employee "1..*" --> "*" coverage : Employee has WIA coverage
+    Insured Employee "0..*" --> "*" claim : Employee may have WIA claims
+    WIA Premium "1" --> "*" policy : Premium belongs to WIA policy
+    WIA Claim "1" --> "*" policy : Claim is made against WIA policy
+    WIA Claim "1" --> "*" insuredPerson : Claim belongs to insured employee
+    WIA Claim "1" --> "*" coverage : Claim falls under WIA coverage
 
     %% Styling for SIVI AFD entities
     classDef policyClass fill:#e1f5fe,stroke:#01579b,stroke-width:2px
@@ -75,7 +80,8 @@ classDiagram
     classDef partyClass fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
     classDef claimClass fill:#fff3e0,stroke:#e65100,stroke-width:2px
 
-    class Policy policyClass
-    class Coverage coverageClass
+    class WIA Policy policyClass
     class Party partyClass
-    class Claim claimClass
+    class WIA Coverage coverageClass
+    class Insured Employee partyClass
+    class WIA Claim claimClass
