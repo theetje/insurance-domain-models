@@ -1,10 +1,10 @@
 # Domain Model Creation Workflow
 
-Complete workflow for creating SIVI AFD 2.0 compliant domain models using the CLI.
+Complete input-focused workflow for creating SIVI AFD 2.0 compliant domain models using the CLI.
 
 ## 🎯 Overview
 
-This workflow covers the complete process from initial model creation to final documentation in Confluence. Each step is automated and maintains SIVI AFD 2.0 compliance.
+This workflow covers the complete process from input template creation to final documentation in Confluence. The process is input-focused, separating source definitions from enhanced working models for clear separation of concerns.
 
 ## 📋 Prerequisites
 
@@ -13,75 +13,80 @@ This workflow covers the complete process from initial model creation to final d
 ✅ **Git Repository**: Connected and accessible  
 ✅ **Confluence**: Connected with required apps  
 
-## 🚀 Quick Workflow
+## 🚀 Quick Input-Focused Workflow
 
 ```bash
-# 1. Create new domain model
+# 1. Create input template
 model-creator create "Motor Insurance Model" --description "SIVI AFD 2.0 motor insurance model"
 
-# 2. Generate SVG diagram
-model-creator generate-svg models/motor-insurance-model.model.json
+# 2. Edit the input file (customize entities, attributes, relationships)
+nano inputs/motor-insurance-model.json
 
-# 3. Check status
-model-creator status
+# 3. Generate SVG diagram
+model-creator generate-svg motor-insurance-model.json
 
-# 4. Push to Git and update Confluence
-model-creator sync --message "Add motor insurance model"
+# 4. Check status
+model-creator input-status
+
+# 5. Process all inputs and sync with Git/Confluence
+model-creator process-inputs
 ```
 
 ## 📝 Step-by-Step Workflow
 
-### Step 1: Create New Domain Model
+### Step 1: Create Input Template
 
-#### Basic Model Creation
+#### Basic Template Creation
 ```bash
-# Create model with default SIVI entities
+# Create input template with default SIVI entities
 model-creator create "Property Insurance Model"
 
 # Create with custom description
 model-creator create "WIA Insurance Model" --description "Work disability insurance with captive structure"
 
-# Create with specific format
-model-creator create "Health Insurance Model" --format mermaid --direction TB
+# Create with specific entity types
+model-creator create "Health Insurance Model" --entities "Policy,Coverage,Party,Claim"
 ```
 
-#### Advanced Model Creation
+#### Advanced Template Creation
 ```bash
 # Create with custom entities
 model-creator create "Marine Insurance Model" \
   --description "Marine cargo and hull insurance model" \
   --entities "Policy,Coverage,Vessel,Cargo,Port,Claim"
 
-# Create with specific relationships
-model-creator create "Liability Insurance Model" \
-  --relationships "Policy->Coverage,Policy->Party,Coverage->Claim"
+# Overwrite existing file
+model-creator create "Liability Insurance Model" --force
 ```
 
-### Step 2: Review Generated Model
+### Step 2: Customize Input Model
 
 ```bash
-# List all models
-model-creator list
+# Edit the generated input file
+nano inputs/property-insurance-model.json
 
-# View model details
-cat models/property-insurance-model.model.json
+# View the input template structure
+cat inputs/property-insurance-model.json | jq
 
-# Check model structure
-node -e "console.log(JSON.stringify(require('./models/property-insurance-model.model.json'), null, 2))"
+# Check input file format
+model-creator input-status
 ```
 
-### Step 3: Generate Diagrams
+### Step 3: Generate Diagrams from Inputs
 
-#### SVG Generation
+#### SVG Generation from Input Files
 ```bash
-# Generate SVG from model
-model-creator generate-svg models/property-insurance-model.model.json
+# Generate SVG from input file (automatic inputs/ lookup)
+model-creator generate-svg property-insurance-model.json
 
 # Generate with custom dimensions
-model-creator generate-svg models/property-insurance-model.model.json --width 1600 --height 1200
+model-creator generate-svg property-insurance-model.json --width 1600 --height 1200
 
 # Generate PlantUML format
-model-creator generate-svg models/property-insurance-model.model.json --format plantuml
+model-creator generate-svg property-insurance-model.json --format plantuml
+
+# SVG only (skip Git/Confluence sync)
+model-creator generate-svg property-insurance-model.json --svg-only
 ```
 
 #### Bulk Processing
@@ -109,29 +114,19 @@ model-creator list-svg
 cat svg-output/property-insurance-model/property-insurance-model-summary.json
 ```
 
-### Step 5: Commit to Git
+### Step 5: Sync with Git and Confluence
 
 ```bash
-# Sync with Git repository
-model-creator sync --message "Add property insurance model"
+# Process inputs and automatically sync with Git and Confluence
+model-creator process-inputs
 
-# Check Git status
-model-creator status
+# Check status of all input models
+model-creator input-status
 
 # Manual Git operations (if needed)
 git add .
 git commit -m "Update insurance models"
 git push origin main
-```
-
-### Step 6: Update Confluence
-
-```bash
-# Debug Confluence connection
-model-creator debug-confluence
-
-# Manual Confluence update (if needed)
-model-creator confluence-sync
 ```
 
 ## 🔄 Common Workflows

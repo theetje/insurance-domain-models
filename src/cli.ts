@@ -79,41 +79,169 @@ program
 // Create model command
 program
   .command('create')
-  .description('Create a new domain model')
-  .argument('<name>', 'model name')
+  .description('Create new SIVI AFD 2.0 domain model template in inputs directory')
+  .argument('<name>', 'name of the domain model')
   .option('-d, --description <description>', 'model description')
   .option('-f, --format <format>', 'diagram format (mermaid|plantuml)', 'mermaid')
-  .option('-o, --output <path>', 'output directory')
+  .option('--direction <direction>', 'diagram direction (TB|LR)', 'TB')
+  .option('--entities <entities>', 'comma-separated list of entity types')
+  .option('--relationships <relationships>', 'comma-separated list of relationships')
+  .option('--force', 'overwrite existing file')
   .action(async (name, options) => {
     try {
-      const modelCreator = new ModelCreator();
-      await modelCreator.initialize(program.opts().config);
+      getLogger().info(`Creating input model template: ${name}`);
 
-      getLogger().info(`Creating domain model: ${name}`);
+      // Ensure inputs directory exists
+      const inputsDir = './inputs';
+      await fs.ensureDir(inputsDir);
 
-      const result = await modelCreator.createCompleteWorkflow(
-        name,
-        options.description,
-        options.format as 'mermaid' | 'plantuml'
-      );
+      // Generate filename from model name
+      const filename = name.toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-')
+        .trim();
 
-      // Save diagram to output directory if specified
-      if (options.output) {
-        const outputDir = path.resolve(options.output);
-        await fs.ensureDir(outputDir);
-        
-        const extension = options.format === 'mermaid' ? '.mmd' : '.puml';
-        const diagramPath = path.join(outputDir, `${name.toLowerCase().replace(/\s+/g, '-')}${extension}`);
-        
-        await fs.writeFile(diagramPath, result.diagram);
-        getLogger().info(`Diagram saved to: ${diagramPath}`);
+      const inputFilePath = path.join(inputsDir, `${filename}.json`);
+
+      // Check if file already exists
+      if (await fs.pathExists(inputFilePath) && !options.force) {
+        getLogger().warn(`Input file already exists: ${inputFilePath}`);
+        console.log(`File already exists: ${inputFilePath}`);
+        console.log('Use --force to overwrite or choose a different name.');
+        return;
       }
 
-      getLogger().info('Domain model created successfully!');
-      console.log(JSON.stringify(result.model, null, 2));
+      // Parse entities if provided
+      let entityTypes = ['Policy', 'Coverage', 'Party', 'Claim', 'Premium', 'Object', 'Clause'];
+      if (options.entities) {
+        entityTypes = options.entities.split(',').map((e: string) => e.trim());
+      }
 
-    } catch (error) {
-      getLogger().error('Failed to create domain model', error);
+      // Create input model template
+      const inputModel = {
+        name: name,
+        version: "1.0.0",
+        description: options.description || `SIVI AFD 2.0 compliant ${name.toLowerCase()} domain model`,
+        namespace: "nl.sivi.afd.insurance",
+        entities: entityTypes.map((entityType, index) => {
+          const entityId = entityType.toLowerCase().replace(/\s+/g, '-');
+          
+          return {
+            id: entityId,
+            name: entityType,
+            description: `${entityType} entity for ${name.toLowerCase()}`,
+            type: entityType,
+            attributes: [
+              {
+                name: `${entityId}Id`,
+                type: "string",
+                required: true,
+                description: `Unique identifier for ${entityType.toLowerCase()}`,
+                siviReference: `AFD.${entityType}.Id`,
+                example: `${entityType.toUpperCase()}-001`
+              },
+              {
+                name: "name",
+                type: "string", 
+                required: true,
+                description: `Name of the ${entityType.toLowerCase()}`,
+                siviReference: `AFD.${entityType}.Name`,
+                example: `Example ${entityType}`
+              },
+              {
+                name: "description",
+                type: "string",
+                required: false,
+                description: `Description of the ${entityType.toLowerCase()}`,
+                siviReference: `AFD.${entityType}.Description`,
+                example: `Detailed description of ${entityType.toLowerCase()}`
+              }
+            ],
+            relationships: [] as any[],
+            siviReference: `AFD.${entityType}`,
+            version: "2.0"
+          };
+        })
+      };
+
+      // Add some default relationships if not specified
+      if (!options.relationships && inputModel.entities.length > 1) {
+        // Add common insurance relationships
+        const policyEntity = inputModel.entities.find(e => e.type === 'Policy');
+        const coverageEntity = inputModel.entities.find(e => e.type === 'Coverage');
+        const partyEntity = inputModel.entities.find(e => e.type === 'Party');
+        const claimEntity = inputModel.entities.find(e => e.type === 'Claim');
+        const premiumEntity = inputModel.entities.find(e => e.type === 'Premium');
+
+        if (policyEntity) {
+          if (coverageEntity) {
+            policyEntity.relationships.push({
+              type: "aggregation",
+              target: coverageEntity.id,
+              cardinality: "1..*",
+              description: "Policy includes one or more coverages"
+            });
+          }
+          if (partyEntity) {
+            policyEntity.relationships.push({
+              type: "association", 
+              target: partyEntity.id,
+              cardinality: "1..*",
+              description: "Policy involves multiple parties"
+            });
+          }
+          if (premiumEntity) {
+            policyEntity.relationships.push({
+              type: "association",
+              target: premiumEntity.id,
+              cardinality: "1",
+              description: "Policy has premium information"
+            });
+          }
+        }
+
+        if (claimEntity && policyEntity) {
+          claimEntity.relationships.push({
+            type: "association",
+            target: policyEntity.id,
+            cardinality: "1",
+            description: "Claim is associated with a policy"
+          });
+        }
+
+        if (claimEntity && coverageEntity) {
+          claimEntity.relationships.push({
+            type: "association",
+            target: coverageEntity.id,
+            cardinality: "1..*",
+            description: "Claim affects one or more coverages"
+          });
+        }
+      }
+
+      // Write the input model file
+      await fs.writeFile(inputFilePath, JSON.stringify(inputModel, null, 2));
+
+      getLogger().info(`Input model template created: ${inputFilePath}`);
+      
+      console.log('\n=== Input Model Template Created ===');
+      console.log(`File: ${inputFilePath}`);
+      console.log(`Name: ${name}`);
+      console.log(`Description: ${inputModel.description}`);
+      console.log(`Entities: ${inputModel.entities.length}`);
+      console.log(`Format: Input template (JSON)`);
+      
+      console.log('\n📝 Next Steps:');
+      console.log(`1. Edit the input file: nano ${inputFilePath}`);
+      console.log(`2. Customize entities, attributes, and relationships`);
+      console.log(`3. Generate SVG: model-creator generate-svg ${filename}.json`);
+      console.log(`4. Process all inputs: model-creator process-inputs`);
+      console.log(`5. Check status: model-creator input-status`);
+
+    } catch (error: any) {
+      getLogger().error('Failed to create input model template', error);
+      console.error(`Error: ${error.message}`);
       process.exit(1);
     }
   });

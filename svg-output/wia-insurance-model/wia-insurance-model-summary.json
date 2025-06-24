@@ -1,0 +1,11 @@
+{
+  "modelName": "WIA Insurance Model",
+  "inputFile": "/Users/thomasdelange/Development/Hienfeld/model-creator/inputs/wia-insurance-model.json",
+  "svgPath": "/Users/thomasdelange/Development/Hienfeld/model-creator/svg-output/wia-insurance-model/wia-insurance-model-diagram.svg",
+  "format": "mermaid",
+  "width": 1400,
+  "height": 1000,
+  "timestamp": "2025-06-24T19:33:42.462Z",
+  "gitPaths": null,
+  "confluencePageId": null
+}
