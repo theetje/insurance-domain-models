@@ -1,6 +1,9 @@
 import axios, { AxiosInstance } from 'axios';
 import { ConfluenceConfig, DomainModel, ConfluenceIntegrationError } from '../types';
 import { Logger } from '../utils/logger';
+import fs from 'fs-extra';
+import path from 'path';
+import FormData from 'form-data';
 
 /**
  * Service for Confluence Cloud integration
@@ -172,18 +175,27 @@ export class ConfluenceService {
       // Check if page already exists
       const existingPage = await this.findPageByTitle(pageTitle);
       
-      // Generate page content
-      const pageContent = await this.generatePageContent(model, diagramContent, diagramFormat, gitFileUrls);
-
       let pageId: string;
       if (existingPage) {
+        pageId = existingPage.id;
+      } else {
+        // Create new page first to get pageId
+        const tempContent = `<p>Generating content...</p>`;
+        pageId = await this.createPage(pageTitle, tempContent);
+        this.logger.info(`Page created: ${pageTitle} (ID: ${pageId})`);
+      }
+
+      // Generate page content with the pageId
+      const pageContent = await this.generatePageContent(model, diagramContent, diagramFormat, gitFileUrls, pageId);
+
+      if (existingPage) {
         // Update existing page
-        pageId = await this.updatePage(existingPage.id, pageTitle, pageContent, existingPage.version.number + 1);
+        await this.updatePage(pageId, pageTitle, pageContent, existingPage.version.number + 1);
         this.logger.info(`Page updated: ${pageTitle} (ID: ${pageId})`);
       } else {
-        // Create new page
-        pageId = await this.createPage(pageTitle, pageContent);
-        this.logger.info(`Page created: ${pageTitle} (ID: ${pageId})`);
+        // Update the page with final content
+        await this.updatePage(pageId, pageTitle, pageContent, 2); // Version 2 since we created it with temp content
+        this.logger.info(`Page content updated: ${pageTitle} (ID: ${pageId})`);
       }
 
       return pageId;
@@ -278,11 +290,9 @@ export class ConfluenceService {
     gitFileUrls: {
       modelUrl: string;
       diagramUrl: string;
-    }
+    },
+    pageId: string
   ): Promise<string> {
-    // Get available macros first
-    const availableMacros = await this.fetchAvailableMacros();
-    
     const content = `
 <h1>${model.name} - Domain Model</h1>
 
@@ -302,7 +312,7 @@ export class ConfluenceService {
 
 <h2>Domain Model Structure</h2>
 
-${this.buildDiagramMacro(diagramFormat, gitFileUrls.diagramUrl, diagramContent, availableMacros)}
+${await this.buildDiagramSection(diagramFormat, gitFileUrls.diagramUrl, diagramContent, model.name, pageId)}
 
 <ac:structured-macro ac:name="expand" ac:schema-version="1" ac:macro-id="diagram-source-expand">
   <ac:parameter ac:name="title">📋 View Diagram Source Code</ac:parameter>
@@ -408,94 +418,85 @@ ${this.buildDiagramMacro(diagramFormat, gitFileUrls.diagramUrl, diagramContent, 
   }
 
   /**
-   * Generate diagram macro based on format
+   * Generate diagram section with uploaded image
    */
-  private buildDiagramMacro(format: 'mermaid' | 'plantuml', gitUrl: string, diagramContent: string, availableMacros: string[]): string {
-    if (format === 'mermaid') {
-      // Determine the best Mermaid macro to use
-      let mermaidMacro = 'mermaid'; // default
-      
-      if (availableMacros.includes('mermaid-diagram')) {
-        mermaidMacro = 'mermaid-diagram';
-      } else if (availableMacros.includes('drawio-mermaid')) {
-        mermaidMacro = 'drawio-mermaid';
-      } else if (availableMacros.includes('mermaid')) {
-        mermaidMacro = 'mermaid';
-      }
-      
-      this.logger.info(`Using Mermaid macro: ${mermaidMacro}`);
-      
-      // Comprehensive Mermaid rendering approach
+  private async buildDiagramSection(
+    format: 'mermaid' | 'plantuml',
+    gitUrl: string,
+    diagramContent: string,
+    modelName: string,
+    pageId: string
+  ): Promise<string> {
+    try {
+      // Generate and upload the diagram image
+      const imageUrl = await this.generateAndUploadDiagramImage(
+        pageId,
+        diagramContent,
+        format,
+        modelName
+      );
+
+      // Create the diagram section with uploaded image
       return `
 <ac:structured-macro ac:name="expand" ac:schema-version="1" ac:macro-id="diagram-expand">
   <ac:parameter ac:name="title">📊 Domain Model Diagram (Click to View)</ac:parameter>
   <ac:rich-text-body>
     <ac:structured-macro ac:name="info" ac:schema-version="1">
       <ac:rich-text-body>
-        <p><strong>🔧 Mermaid Diagrams for Confluence Status:</strong></p>
+        <p><strong>🎯 High-Quality Diagram:</strong> This diagram is automatically generated as an image file and uploaded to Confluence, ensuring it's always visible regardless of installed apps.</p>
         <ul>
-          <li><strong>Detected macro:</strong> <code>${mermaidMacro}</code></li>
-          <li><strong>Available macros:</strong> ${availableMacros.join(', ')}</li>
-          <li><strong>App URL:</strong> <a href="https://marketplace.atlassian.com/apps/1226945/mermaid-diagrams-for-confluence">Install Mermaid Diagrams</a></li>
+          <li><strong>Format:</strong> ${format.toUpperCase()}</li>
+          <li><strong>Resolution:</strong> High-quality PNG (1400x1000)</li>
+          <li><strong>Source:</strong> <a href="${gitUrl}">View diagram source in Git →</a></li>
         </ul>
-        <p><strong>🔗 Source:</strong> <a href="${gitUrl}">View diagram source in Git →</a></p>
       </ac:rich-text-body>
     </ac:structured-macro>
 
-    <h3>📋 Mermaid Diagram</h3>
+    <h3>📋 ${format === 'mermaid' ? 'Mermaid' : 'PlantUML'} Diagram</h3>
     
-    <!-- Try primary Mermaid macro -->
-    <ac:structured-macro ac:name="${mermaidMacro}" ac:schema-version="1" ac:macro-id="mermaid-diagram-main">
-      <ac:parameter ac:name="diagramDefinition">${this.escapeForConfluence(diagramContent)}</ac:parameter>
-    </ac:structured-macro>
+    <p><ac:image ac:width="100%"><ri:attachment ri:filename="${modelName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9\-]/g, '')}-diagram.png" /></ac:image></p>
     
-    <!-- Fallback: try alternative parameter names -->
-    <ac:structured-macro ac:name="${mermaidMacro}" ac:schema-version="1" ac:macro-id="mermaid-diagram-alt">
-      <ac:parameter ac:name="definition">${this.escapeForConfluence(diagramContent)}</ac:parameter>
-    </ac:structured-macro>
+    <h4>📋 Source Code</h4>
+    <p><strong>Copy and paste this code to modify or regenerate the diagram:</strong></p>
     
-    <!-- Fallback: plain text content -->
-    <ac:structured-macro ac:name="${mermaidMacro}" ac:schema-version="1" ac:macro-id="mermaid-diagram-plain">
+    <ac:structured-macro ac:name="code" ac:schema-version="1" ac:macro-id="${format}-source-code">
+      <ac:parameter ac:name="language">${format}</ac:parameter>
+      <ac:parameter ac:name="title">${format.toUpperCase()} Diagram Source Code</ac:parameter>
       <ac:plain-text-body><![CDATA[${diagramContent}]]></ac:plain-text-body>
     </ac:structured-macro>
     
-    <h4>Alternative: Raw Code (if app is not working)</h4>
-    <p><strong>Copy and paste this code into Mermaid Live Editor or any Mermaid renderer:</strong></p>
+    <h4>🔗 External Tools</h4>
+    <ul>
+      <li><strong>Live Editor:</strong> <a href="https://${format}.live/edit#pako:${Buffer.from(diagramContent).toString('base64')}">Open in ${format === 'mermaid' ? 'Mermaid' : 'PlantUML'} Live Editor</a></li>
+      <li><strong>Git Source:</strong> <a href="${gitUrl}">View source file in repository</a></li>
+    </ul>
     
-    <ac:structured-macro ac:name="code" ac:schema-version="1" ac:macro-id="mermaid-source-code">
-      <ac:parameter ac:name="language">mermaid</ac:parameter>
-      <ac:parameter ac:name="title">Mermaid Diagram Source Code</ac:parameter>
-      <ac:plain-text-body><![CDATA[${diagramContent}]]></ac:plain-text-body>
-    </ac:structured-macro>
-    
-    <p><em>🚀 <strong>Live Demo:</strong> <a href="https://mermaid.live/edit#pako:${Buffer.from(diagramContent).toString('base64')}">Open in Mermaid Live Editor</a></em></p>
-    
-    <p><em>If you have the Mermaid Diagrams app installed, one of the diagrams above should render automatically. If not, click the Live Demo link to see the visual representation.</em></p>
+    <p><em>✅ This diagram is automatically generated and uploaded as a high-quality image, so it's always visible and doesn't require any additional Confluence apps.</em></p>
   </ac:rich-text-body>
 </ac:structured-macro>`;
-    } else {
-      // Try multiple approaches for PlantUML rendering
+
+    } catch (error) {
+      this.logger.error('Failed to generate diagram image, falling back to code block', error);
+      
+      // Fallback to code block if image generation fails
       return `
 <ac:structured-macro ac:name="expand" ac:schema-version="1" ac:macro-id="diagram-expand">
-  <ac:parameter ac:name="title">📊 UML Class Diagram (Click to View)</ac:parameter>
+  <ac:parameter ac:name="title">📊 Domain Model Diagram (Click to View)</ac:parameter>
   <ac:rich-text-body>
     <ac:structured-macro ac:name="info" ac:schema-version="1">
       <ac:rich-text-body>
-        <p><strong>🔧 To see the visual diagram:</strong></p>
-        <ol>
-          <li><strong>Option 1:</strong> Install a <a href="https://marketplace.atlassian.com/search?product=confluence&query=plantuml">PlantUML app for Confluence</a></li>
-          <li><strong>Option 2:</strong> Use the <a href="https://marketplace.atlassian.com/apps/1211676/git-for-confluence-git-embed">Git for Confluence</a> app to embed from repository</li>
-          <li><strong>Option 3:</strong> Copy the code below and paste it into <a href="https://plantuml.com/plantuml">PlantUML Online Server</a></li>
-        </ol>
+        <p><strong>⚠️ Image Generation Failed:</strong> Displaying source code instead. You can copy this code and paste it into a ${format} editor to view the diagram.</p>
         <p><strong>🔗 Source:</strong> <a href="${gitUrl}">View diagram source in Git →</a></p>
       </ac:rich-text-body>
     </ac:structured-macro>
 
-    <ac:structured-macro ac:name="code" ac:schema-version="1" ac:macro-id="plantuml-diagram">
-      <ac:parameter ac:name="language">plantuml</ac:parameter>
-      <ac:parameter ac:name="title">PlantUML Diagram Source</ac:parameter>
-      <ac:rich-text-body><![CDATA[${diagramContent}]]></ac:rich-text-body>
+    <ac:structured-macro ac:name="code" ac:schema-version="1" ac:macro-id="${format}-fallback-code">
+      <ac:parameter ac:name="language">${format}</ac:parameter>
+      <ac:parameter ac:name="title">${format.toUpperCase()} Diagram Source Code</ac:parameter>
+      <ac:plain-text-body><![CDATA[${diagramContent}]]></ac:plain-text-body>
     </ac:structured-macro>
+    
+    <p><strong>🚀 Live Demo:</strong> <a href="https://${format}.live/edit#pako:${Buffer.from(diagramContent).toString('base64')}">Open in ${format === 'mermaid' ? 'Mermaid' : 'PlantUML'} Live Editor</a></p>
   </ac:rich-text-body>
 </ac:structured-macro>`;
     }
@@ -684,6 +685,115 @@ It provides standardized definitions for insurance entities, attributes, and rel
     } catch (error) {
       this.logger.warn('Failed to get available macros', error);
       return null;
+    }
+  }
+
+  /**
+   * Upload image file as attachment to Confluence page
+   */
+  async uploadImageToConfluence(
+    pageId: string,
+    imagePath: string,
+    filename?: string
+  ): Promise<string> {
+    try {
+      const imageFilename = filename || path.basename(imagePath);
+      this.logger.info(`Uploading image to Confluence page ${pageId}: ${imageFilename}`);
+
+      // Create form data for the upload
+      const formData = new FormData();
+      const imageStream = fs.createReadStream(imagePath);
+      
+      formData.append('file', imageStream, {
+        filename: imageFilename,
+        contentType: imagePath.endsWith('.svg') ? 'image/svg+xml' : 'image/png'
+      });
+      formData.append('minorEdit', 'true');
+
+      // Upload the attachment
+      const response = await this.client.post(`/content/${pageId}/child/attachment`, formData, {
+        headers: {
+          ...formData.getHeaders(),
+          'X-Atlassian-Token': 'no-check'
+        }
+      });
+
+      const attachmentId = response.data.results[0]?.id;
+      if (!attachmentId) {
+        throw new Error('Failed to get attachment ID from upload response');
+      }
+
+      this.logger.info(`Image uploaded successfully. Attachment ID: ${attachmentId}`);
+      
+      // Return the download URL for the attachment
+      const downloadUrl = `${this.config.baseUrl}/wiki/download/attachments/${pageId}/${encodeURIComponent(imageFilename)}`;
+      return downloadUrl;
+
+    } catch (error) {
+      const message = `Failed to upload image to Confluence: ${error instanceof Error ? error.message : 'Unknown error'}`;
+      this.logger.error(message, error);
+      throw new Error(message);
+    }
+  }
+
+  /**
+   * Generate diagram image and upload to Confluence, returning image URL
+   */
+  async generateAndUploadDiagramImage(
+    pageId: string,
+    diagramContent: string,
+    diagramFormat: 'mermaid' | 'plantuml',
+    modelName: string
+  ): Promise<string> {
+    const diagramImageService = new (await import('./diagram-image.service')).DiagramImageService();
+    
+    // Create temporary file path
+    const tempDir = path.join(process.cwd(), 'temp');
+    await fs.ensureDir(tempDir);
+    
+    const sanitizedName = modelName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9\-]/g, '');
+    const imageExtension = 'png'; // We'll use PNG for best compatibility
+    const tempImagePath = path.join(tempDir, `${sanitizedName}-diagram.${imageExtension}`);
+    
+    try {
+      let imagePath: string;
+      
+      if (diagramFormat === 'mermaid') {
+        imagePath = await diagramImageService.generateMermaidImage(
+          diagramContent,
+          tempImagePath,
+          'png',
+          1400, // Larger size for better quality
+          1000
+        );
+      } else {
+        imagePath = await diagramImageService.generatePlantUMLImage(
+          diagramContent,
+          tempImagePath,
+          'png'
+        );
+      }
+
+      // Upload to Confluence
+      const imageUrl = await this.uploadImageToConfluence(
+        pageId,
+        imagePath,
+        `${sanitizedName}-diagram.${imageExtension}`
+      );
+
+      // Clean up temporary file
+      await diagramImageService.cleanupTempFiles([imagePath]);
+      
+      return imageUrl;
+
+    } catch (error) {
+      // Ensure cleanup even if there's an error
+      try {
+        await diagramImageService.cleanupTempFiles([tempImagePath]);
+      } catch (cleanupError) {
+        this.logger.warn('Failed to cleanup temporary files', cleanupError);
+      }
+      throw error;
     }
   }
 }
