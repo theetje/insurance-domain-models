@@ -1,10 +1,10 @@
-# WIA Test Model Updated - Domain Model
+# Mermaid Diagram Test - Domain Model
 
-Updated Test Model for WIA Insurance Coverage with diagram fix
+Simple test to verify Mermaid diagrams appear in Confluence
 
 ## Overview
 
-This repository contains the domain model for WIA Test Model Updated, built using the SIVI AFD 2.0 standard for Dutch insurance industry.
+This repository contains the domain model for Mermaid Diagram Test, built using the SIVI AFD 2.0 standard for Dutch insurance industry.
 
 ## Structure
 
@@ -31,7 +31,7 @@ The UML diagrams in this repository are automatically generated from the domain 
 
 ## Version History
 
-- Version 1.0.0 - 2025-06-24T16:20:27.745Z
+- Version 1.0.0 - 2025-06-24T16:23:13.645Z
 
 ## Integration with Confluence
 

@@ -338,7 +338,7 @@ ${this.generateDiagramMacro(diagramFormat, gitFileUrls.diagramUrl, diagramConten
    */
   private generateDiagramMacro(format: 'mermaid' | 'plantuml', gitUrl: string, diagramContent: string): string {
     if (format === 'mermaid') {
-      // Try multiple approaches for Mermaid rendering
+      // Comprehensive Mermaid rendering approach
       return `
 <ac:structured-macro ac:name="expand" ac:schema-version="1" ac:macro-id="diagram-expand">
   <ac:parameter ac:name="title">📊 UML Class Diagram (Click to View)</ac:parameter>
@@ -355,17 +355,16 @@ ${this.generateDiagramMacro(diagramFormat, gitFileUrls.diagramUrl, diagramConten
       </ac:rich-text-body>
     </ac:structured-macro>
 
-    <!-- Try the Mermaid app macro first -->
-    <ac:structured-macro ac:name="mermaid" ac:schema-version="1" ac:macro-id="mermaid-live-diagram">
+    <h3>📋 Mermaid Diagram Code</h3>
+    <p><strong>Copy and paste this code into Mermaid Live Editor or any Mermaid renderer:</strong></p>
+    
+    <ac:structured-macro ac:name="code" ac:schema-version="1" ac:macro-id="mermaid-source-code">
+      <ac:parameter ac:name="language">mermaid</ac:parameter>
+      <ac:parameter ac:name="title">Mermaid Diagram Source Code</ac:parameter>
       <ac:plain-text-body><![CDATA[${diagramContent}]]></ac:plain-text-body>
     </ac:structured-macro>
-
-    <!-- Fallback to code block for manual processing -->
-    <ac:structured-macro ac:name="code" ac:schema-version="1" ac:macro-id="mermaid-diagram">
-      <ac:parameter ac:name="language">mermaid</ac:parameter>
-      <ac:parameter ac:name="title">Mermaid Diagram Source</ac:parameter>
-      <ac:rich-text-body><![CDATA[${diagramContent}]]></ac:rich-text-body>
-    </ac:structured-macro>
+    
+    <p><em>If you have the Mermaid Diagrams app installed, the code above should render as a visual diagram automatically. If not, copy the code to <a href="https://mermaid.live/">Mermaid Live Editor</a> to see the visual representation.</em></p>
   </ac:rich-text-body>
 </ac:structured-macro>`;
     } else {
