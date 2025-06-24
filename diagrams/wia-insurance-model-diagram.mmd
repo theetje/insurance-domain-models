@@ -2,7 +2,7 @@ classDiagram
 
     %% Domain Model: WIA Insurance Model with Captive Structure
     %% Version: 1.0.0
-    %% Generated: 2025-06-24T20:00:41.211Z
+    %% Generated: 2025-06-24T20:19:44.088Z
     %% Based on SIVI AFD 2.0
 
     class Policy {
@@ -13,6 +13,8 @@ classDiagram
         +premiumCollector string
         +collectionMethod string
         +paymentTermInMonths number
+        <<Policy>>
+        +siviRef: AFD.Policy
     }
 
     class Coverage {
@@ -22,6 +24,8 @@ classDiagram
         +insuredAmount number
         +currency string
         +benefitPercentage number
+        <<Coverage>>
+        +siviRef: AFD.Coverage
     }
 
     class Party {
@@ -32,6 +36,8 @@ classDiagram
         +number string
         +postalCode string
         +city string
+        <<Party>>
+        +siviRef: AFD.Party
     }
 
     class Claim {
@@ -41,6 +47,8 @@ classDiagram
         +status string
         +disabilityPercentage number
         -uwvReference string
+        <<Claim>>
+        +siviRef: AFD.Claim
     }
 
     class Premium {
@@ -48,6 +56,8 @@ classDiagram
         +currency string
         +paymentFrequency string
         +paymentMethod string
+        <<Premium>>
+        +siviRef: AFD.Premium
     }
 
     class InsuredPerson {
@@ -69,6 +79,8 @@ classDiagram
         +annualSalary number
         +coverageType string
         +employer string
+        <<Party>>
+        +siviRef: AFD.Person
     }
 
     class Object {
@@ -77,6 +89,8 @@ classDiagram
         +employmentStartDate Date
         +salary number
         +jobTitle string
+        <<Object>>
+        +siviRef: AFD.Object
     }
 
     class Clause {
@@ -85,27 +99,38 @@ classDiagram
         +description string
         +clauseText string
         +applicableToWIA boolean
+        <<Clause>>
+        +siviRef: AFD.Clause
     }
 
-    Policy o-- Coverage : Policy includes WIA coverage
-    Policy --> Party : Policy involves multiple parties (employer, captive, intermediary, insurer)
-    Policy --> Premium : Policy has premium information
-    Policy --> InsuredPerson : Policy covers insured employees
-    Claim --> Policy : Claim is associated with a policy
-    Claim --> InsuredPerson : Claim relates to an insured person
-    Claim --> Coverage : Claim affects one or more coverages
-    InsuredPerson --> Policy : Insured person is covered by policy
-    Object --> InsuredPerson : Object relates to insured person's employment
-    Clause --> Coverage : Clause applies to specific coverages
+    Policy o-- Coverage : "Policy includes WIA coverage" "1..*"
+    Policy --> Party : "Policy involves multiple parties (employer, captive, intermediary, insurer)" "1..*"
+    Policy --> Premium : "Policy has premium information" "1"
+    Policy --> InsuredPerson : "Policy covers insured employees" "1..*"
+    Claim --> Policy : "Claim is associated with a policy" "1"
+    Claim --> InsuredPerson : "Claim relates to an insured person" "1"
+    Claim --> Coverage : "Claim affects one or more coverages" "1..*"
+    InsuredPerson --> Policy : "Insured person is covered by policy" "1"
+    Object --> InsuredPerson : "Object relates to insured person's employment" "1"
+    Clause --> Coverage : "Clause applies to specific coverages" "1..*"
 
-    %% Styling for SIVI AFD entities
-    classDef policyClass fill:#e1f5fe,stroke:#01579b,stroke-width:2px
-    classDef coverageClass fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
-    classDef partyClass fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
-    classDef claimClass fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    %% Enhanced SIVI AFD 2.0 Styling
+    classDef policyClass fill:#e1f5fe,stroke:#01579b,stroke-width:3px,color:#000000
+    classDef coverageClass fill:#f3e5f5,stroke:#4a148c,stroke-width:3px,color:#000000
+    classDef partyClass fill:#e8f5e8,stroke:#1b5e20,stroke-width:3px,color:#000000
+    classDef claimClass fill:#fff3e0,stroke:#e65100,stroke-width:3px,color:#000000
+    classDef premiumClass fill:#fff8e1,stroke:#f57c00,stroke-width:3px,color:#000000
+    classDef objectClass fill:#f1f8e9,stroke:#33691e,stroke-width:3px,color:#000000
+    classDef clauseClass fill:#fce4ec,stroke:#ad1457,stroke-width:3px,color:#000000
 
     class Policy policyClass
     class Coverage coverageClass
     class Party partyClass
     class Claim claimClass
+    class Premium premiumClass
     class InsuredPerson partyClass
+    class Object objectClass
+    class Clause clauseClass
+
+    %% SIVI AFD 2.0 Compliance Notes
+    note for Policy "SIVI AFD 2.0 Compliant\nNamespace: nl.sivi.afd.wia.insurance\nVersion: 1.0.0"
