@@ -2,6 +2,7 @@
 
 Work disability insurance with captive structure
 
+
 ## Overview
 
 This repository contains the domain model for WIA Insurance Model, built using the SIVI AFD 2.0 standard for Dutch insurance industry.
@@ -31,7 +32,7 @@ The UML diagrams in this repository are automatically generated from the domain 
 
 ## Version History
 
-- Version 1.0.0 - 2025-06-24T19:05:45.284Z
+- Version 1.0.0 - 2025-06-24T19:16:16.291Z
 
 ## Integration with Confluence
 

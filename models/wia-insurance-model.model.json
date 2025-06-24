@@ -1,7 +1,7 @@
 {
   "name": "WIA Insurance Model",
   "version": "1.0.0",
-  "description": "Work disability insurance with captive structure",
+  "description": "Work disability insurance with captive structure\n",
   "namespace": "nl.sivi.afd.insurance",
   "entities": [
     {
@@ -373,8 +373,8 @@
     }
   ],
   "metadata": {
-    "created": "2025-06-24T19:05:45.284Z",
-    "updated": "2025-06-24T19:05:45.284Z",
+    "created": "2025-06-24T19:16:16.291Z",
+    "updated": "2025-06-24T19:16:16.291Z",
     "author": "SIVI AFD 2.0 Model Creator",
     "siviVersion": "2.0"
   }
