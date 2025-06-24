@@ -48,8 +48,17 @@ export class DiagramImageService {
         // Set the HTML content
         await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
         
-        // Wait for Mermaid to render
-        await page.waitForSelector('#mermaid-diagram svg', { timeout: 10000 });
+        // Wait for Mermaid to render completely
+        await page.waitForFunction(
+          () => (globalThis as any).mermaidRenderComplete === true,
+          { timeout: 15000 }
+        );
+        
+        // Check if there was a rendering error
+        const renderError = await page.evaluate(() => (globalThis as any).mermaidRenderError);
+        if (renderError) {
+          throw new Error(`Mermaid rendering failed: ${renderError.message || renderError}`);
+        }
         
         // Get the SVG element
         const svgElement = await page.$('#mermaid-diagram svg');
@@ -138,12 +147,61 @@ export class DiagramImageService {
    * Create HTML template for Mermaid rendering
    */
   private createMermaidHtml(diagramCode: string, width: number, height: number): string {
-    return `
-<!DOCTYPE html>
+    return `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
-  <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
+  <title>Mermaid Diagram</title>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11.7.0/dist/mermaid.esm.min.mjs';
+    
+    // Initialize mermaid with proper configuration for version 11.x
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'default',
+      securityLevel: 'loose',
+      fontFamily: 'Arial, sans-serif',
+      fontSize: '16px',
+      flowchart: {
+        useMaxWidth: true,
+        htmlLabels: true,
+        curve: 'basis'
+      },
+      classDiagram: {
+        useMaxWidth: true
+      }
+    });
+
+    // Wait for DOM to be ready
+    document.addEventListener('DOMContentLoaded', async function() {
+      try {
+        const diagramCode = \`${diagramCode.replace(/`/g, '\\`')}\`;
+        const element = document.getElementById('mermaid-diagram');
+        
+        // Clear any existing content
+        element.innerHTML = '';
+        
+        // Render the diagram using Mermaid 11.x API
+        const { svg, bindFunctions } = await mermaid.render('generated-diagram', diagramCode);
+        element.innerHTML = svg;
+        
+        // Bind any interactive functions if needed
+        if (bindFunctions) {
+          bindFunctions(element);
+        }
+        
+        // Signal that rendering is complete
+        window.mermaidRenderComplete = true;
+        
+      } catch (error) {
+        console.error('Mermaid rendering error:', error);
+        document.getElementById('mermaid-diagram').innerHTML = 
+          '<div style="color: red; padding: 20px;">Error rendering diagram: ' + error.message + '</div>';
+        window.mermaidRenderComplete = true;
+        window.mermaidRenderError = error;
+      }
+    });
+  </script>
   <style>
     body {
       margin: 0;
@@ -158,28 +216,16 @@ export class DiagramImageService {
       justify-content: center;
       align-items: center;
     }
+    #mermaid-diagram svg {
+      max-width: 100%;
+      max-height: 100%;
+    }
   </style>
 </head>
 <body>
   <div id="mermaid-diagram">
-    <div class="mermaid">
-${diagramCode}
-    </div>
+    <div>Loading diagram...</div>
   </div>
-  
-  <script>
-    mermaid.initialize({
-      startOnLoad: true,
-      theme: 'default',
-      flowchart: {
-        useMaxWidth: true,
-        htmlLabels: true
-      },
-      classDiagram: {
-        useMaxWidth: true
-      }
-    });
-  </script>
 </body>
 </html>`;
   }
