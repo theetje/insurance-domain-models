@@ -1,7 +1,7 @@
 {
-  "name": "WIA Test Model",
+  "name": "Test Model",
   "version": "1.0.0",
-  "description": "Test model with improved Confluence integration and correct GitHub links",
+  "description": "A test model",
   "namespace": "nl.sivi.afd.insurance",
   "entities": [
     {
@@ -373,8 +373,8 @@
     }
   ],
   "metadata": {
-    "created": "2025-06-24T16:08:06.683Z",
-    "updated": "2025-06-24T16:08:06.683Z",
+    "created": "2025-06-24T18:26:45.328Z",
+    "updated": "2025-06-24T18:26:45.328Z",
     "author": "SIVI AFD 2.0 Model Creator",
     "siviVersion": "2.0"
   }

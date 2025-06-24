@@ -8,7 +8,27 @@ import fs from 'fs-extra';
 import path from 'path';
 
 const program = new Command();
-const logger = Logger.getInstance();
+
+// Helper function to get logger based on global options
+function getLogger(): Logger {
+  const globalOptions = program.opts();
+  const level = globalOptions.verbose ? 'info' : 'warn';
+  
+  // Set global log level to affect all services
+  Logger.setGlobalLevel(level);
+  
+  return Logger.getInstance({
+    level
+  });
+}
+
+// Helper function to initialize ModelCreator with proper log level
+async function initializeModelCreator(): Promise<ModelCreator> {
+  const modelCreator = new ModelCreator();
+  const logLevel = program.opts().verbose ? 'info' : 'warn';
+  await modelCreator.initialize(program.opts().config, logLevel);
+  return modelCreator;
+}
 
 program
   .name('model-creator')
@@ -29,8 +49,10 @@ program
   .option('-d, --description <description>', 'repository description')
   .action(async (options) => {
     try {
-      const modelCreator = new ModelCreator();
-      await modelCreator.initialize(program.opts().config);
+      // Initialize logger with verbose setting
+      const logger = getLogger();
+      
+      const modelCreator = await initializeModelCreator();
 
       logger.info('Initializing new model repository...');
 
@@ -40,16 +62,16 @@ program
       
       const result = await modelCreator.createCompleteWorkflow(name, description);
 
-      logger.info('Repository initialized successfully!');
-      logger.info(`Model: ${result.model.name}`);
-      logger.info(`Entities: ${result.model.entities.length}`);
+      getLogger().info('Repository initialized successfully!');
+      getLogger().info(`Model: ${result.model.name}`);
+      getLogger().info(`Entities: ${result.model.entities.length}`);
       
       if (result.confluencePageId) {
-        logger.info(`Confluence Page ID: ${result.confluencePageId}`);
+        getLogger().info(`Confluence Page ID: ${result.confluencePageId}`);
       }
 
     } catch (error) {
-      logger.error('Failed to initialize repository', error);
+      getLogger().error('Failed to initialize repository', error);
       process.exit(1);
     }
   });
@@ -67,7 +89,7 @@ program
       const modelCreator = new ModelCreator();
       await modelCreator.initialize(program.opts().config);
 
-      logger.info(`Creating domain model: ${name}`);
+      getLogger().info(`Creating domain model: ${name}`);
 
       const result = await modelCreator.createCompleteWorkflow(
         name,
@@ -84,14 +106,14 @@ program
         const diagramPath = path.join(outputDir, `${name.toLowerCase().replace(/\s+/g, '-')}${extension}`);
         
         await fs.writeFile(diagramPath, result.diagram);
-        logger.info(`Diagram saved to: ${diagramPath}`);
+        getLogger().info(`Diagram saved to: ${diagramPath}`);
       }
 
-      logger.info('Domain model created successfully!');
+      getLogger().info('Domain model created successfully!');
       console.log(JSON.stringify(result.model, null, 2));
 
     } catch (error) {
-      logger.error('Failed to create domain model', error);
+      getLogger().error('Failed to create domain model', error);
       process.exit(1);
     }
   });
@@ -111,7 +133,7 @@ program
       const modelCreator = new ModelCreator();
       await modelCreator.initialize(program.opts().config);
 
-      logger.info(`Generating diagram from: ${modelFile}`);
+      getLogger().info(`Generating diagram from: ${modelFile}`);
 
       // Load model
       const modelPath = path.resolve(modelFile);
@@ -134,13 +156,13 @@ program
         const outputPath = path.resolve(options.output);
         await fs.ensureDir(path.dirname(outputPath));
         await fs.writeFile(outputPath, diagram);
-        logger.info(`Diagram saved to: ${outputPath}`);
+        getLogger().info(`Diagram saved to: ${outputPath}`);
       } else {
         console.log(diagram);
       }
 
     } catch (error) {
-      logger.error('Failed to generate diagram', error);
+      getLogger().error('Failed to generate diagram', error);
       process.exit(1);
     }
   });
@@ -155,19 +177,19 @@ program
       const modelCreator = new ModelCreator();
       await modelCreator.initialize(program.opts().config);
 
-      logger.info('Syncing models with Git and Confluence...');
+      getLogger().info('Syncing models with Git and Confluence...');
 
       // Get list of models
       const models = await modelCreator.listDomainModels();
       
       if (models.length === 0) {
-        logger.info('No models found to sync');
+        getLogger().info('No models found to sync');
         return;
       }
 
       // Process each model
       for (const modelFile of models) {
-        logger.info(`Processing model: ${modelFile}`);
+        getLogger().info(`Processing model: ${modelFile}`);
         
         const model = await modelCreator.loadDomainModelFromGit(modelFile);
         const diagram = await modelCreator.generateDiagram(model);
@@ -183,10 +205,10 @@ program
       // Commit changes
       await modelCreator.commitAndPushChanges(options.message);
 
-      logger.info('Sync completed successfully!');
+      getLogger().info('Sync completed successfully!');
 
     } catch (error) {
-      logger.error('Failed to sync models', error);
+      getLogger().error('Failed to sync models', error);
       process.exit(1);
     }
   });
@@ -200,7 +222,7 @@ program
       const modelCreator = new ModelCreator();
       await modelCreator.initialize(program.opts().config);
 
-      logger.info('Checking integration status...');
+      getLogger().info('Checking integration status...');
       
       const status = await modelCreator.getIntegrationStatus();
 
@@ -220,7 +242,7 @@ program
       console.log(`  Last Modified: ${status.models.lastModified || 'Unknown'}`);
 
     } catch (error) {
-      logger.error('Failed to get status', error);
+      getLogger().error('Failed to get status', error);
       process.exit(1);
     }
   });
@@ -230,9 +252,11 @@ program
   .command('list')
   .description('List all domain models')
   .action(async () => {
+    // Set logging level first
+    getLogger();
+    
     try {
-      const modelCreator = new ModelCreator();
-      await modelCreator.initialize(program.opts().config);
+      const modelCreator = await initializeModelCreator();
 
       const models = await modelCreator.listDomainModels();
 
@@ -258,7 +282,7 @@ program
       }
 
     } catch (error) {
-      logger.error('Failed to list models', error);
+      getLogger().error('Failed to list models', error);
       process.exit(1);
     }
   });
@@ -275,7 +299,7 @@ program
         const configPath = path.resolve('.model-creator.json');
         
         if (await fs.pathExists(configPath)) {
-          logger.warn('Configuration file already exists');
+          getLogger().warn('Configuration file already exists');
           return;
         }
 
@@ -314,7 +338,7 @@ program
         };
 
         await fs.writeFile(configPath, JSON.stringify(defaultConfig, null, 2));
-        logger.info(`Configuration file created: ${configPath}`);
+        getLogger().info(`Configuration file created: ${configPath}`);
         console.log('\nPlease edit the configuration file with your settings:');
         console.log('- Git repository URL and credentials');
         console.log('- Confluence URL and API token');
@@ -330,7 +354,7 @@ program
       }
 
     } catch (error) {
-      logger.error('Failed to manage configuration', error);
+      getLogger().error('Failed to manage configuration', error);
       process.exit(1);
     }
   });
@@ -352,7 +376,7 @@ program
         throw new Error(`Input file not found: ${inputPath}`);
       }
 
-      logger.info(`Importing domain model from: ${inputFile}`);
+      getLogger().info(`Importing domain model from: ${inputFile}`);
 
       // Load and parse the input file
       const inputContent = await fs.readFile(inputPath, 'utf-8');
@@ -393,25 +417,25 @@ program
         const diagramPath = path.join(outputDir, `${model.name.toLowerCase().replace(/\s+/g, '-')}${extension}`);
         
         await fs.writeFile(diagramPath, diagram);
-        logger.info(`Diagram saved to: ${diagramPath}`);
+        getLogger().info(`Diagram saved to: ${diagramPath}`);
       }
 
       // Sync with Confluence if configured (using complete workflow approach)
       if (modelCreator.getConfig().confluence && modelCreator.getConfig().confluence.baseUrl) {
         try {
           // Use the complete workflow method which handles Confluence sync
-          logger.info('Syncing with Confluence...');
+          getLogger().info('Syncing with Confluence...');
           // The syncWithConfluence will be handled if both Git and Confluence are configured
         } catch (error) {
-          logger.warn('Failed to sync with Confluence', error);
+          getLogger().warn('Failed to sync with Confluence', error);
         }
       }
 
-      logger.info('Domain model imported successfully!');
+      getLogger().info('Domain model imported successfully!');
       console.log(JSON.stringify(model, null, 2));
 
     } catch (error) {
-      logger.error('Failed to import domain model', error);
+      getLogger().error('Failed to import domain model', error);
       process.exit(1);
     }
   });
@@ -430,12 +454,12 @@ program
       // Add .model.json extension if not present
       const modelFile = modelName.endsWith('.model.json') ? modelName : `${modelName}.model.json`;
       
-      logger.info(`Removing domain model: ${modelFile}`);
+      getLogger().info(`Removing domain model: ${modelFile}`);
 
       // Check if model exists
       const models = await modelCreator.listDomainModels();
       if (!models.includes(modelFile)) {
-        logger.error(`Model not found: ${modelFile}`);
+        getLogger().error(`Model not found: ${modelFile}`);
         console.log('Available models:');
         models.forEach((model: string) => console.log(`  - ${model}`));
         process.exit(1);
@@ -456,7 +480,7 @@ program
         rl.close();
 
         if (answer.toLowerCase() !== 'y' && answer.toLowerCase() !== 'yes') {
-          logger.info('Removal cancelled');
+          getLogger().info('Removal cancelled');
           return;
         }
       }
@@ -469,28 +493,28 @@ program
       // Remove files
       if (await fs.pathExists(modelPath)) {
         await fs.remove(modelPath);
-        logger.info(`Removed model: ${modelPath}`);
+        getLogger().info(`Removed model: ${modelPath}`);
       }
 
       if (await fs.pathExists(diagramPath)) {
         await fs.remove(diagramPath);
-        logger.info(`Removed diagram: ${diagramPath}`);
+        getLogger().info(`Removed diagram: ${diagramPath}`);
       }
 
       // Commit changes if Git is configured
       if (modelCreator.getConfig().git && modelCreator.getConfig().git.repositoryUrl) {
         try {
           await modelCreator.commitAndPushChanges(`Remove ${modelFile} and related files`);
-          logger.info('Changes committed and pushed to Git');
+          getLogger().info('Changes committed and pushed to Git');
         } catch (error) {
-          logger.warn('Failed to commit changes to Git', error);
+          getLogger().warn('Failed to commit changes to Git', error);
         }
       }
 
-      logger.info(`Domain model ${modelFile} removed successfully`);
+      getLogger().info(`Domain model ${modelFile} removed successfully`);
 
     } catch (error) {
-      logger.error('Failed to remove domain model', error);
+      getLogger().error('Failed to remove domain model', error);
       process.exit(1);
     }
   });
@@ -504,20 +528,20 @@ program
       const modelCreator = new ModelCreator();
       await modelCreator.initialize(program.opts().config);
 
-      logger.info('Testing Confluence connection and checking macros...');
+      getLogger().info('Testing Confluence connection and checking macros...');
       
       // Test connection
       const isConnected = await modelCreator.testConfluenceConnection();
       if (!isConnected) {
-        logger.error('❌ Confluence connection failed');
+        getLogger().error('❌ Confluence connection failed');
         process.exit(1);
       }
       
-      logger.info('✅ Confluence connection successful');
+      getLogger().info('✅ Confluence connection successful');
       
       // Fetch available macros
       const macros = await modelCreator.getConfluenceMacros();
-      logger.info(`📋 Available macros (${macros.length}): ${macros.join(', ')}`);
+      getLogger().info(`📋 Available macros (${macros.length}): ${macros.join(', ')}`);
       
       // Check specifically for Mermaid-related macros
       const mermaidMacros = macros.filter((macro: string) => 
@@ -526,14 +550,14 @@ program
       );
       
       if (mermaidMacros.length > 0) {
-        logger.info(`🎯 Mermaid-related macros found: ${mermaidMacros.join(', ')}`);
+        getLogger().info(`🎯 Mermaid-related macros found: ${mermaidMacros.join(', ')}`);
       } else {
-        logger.warn('⚠️  No Mermaid-related macros detected');
-        logger.info('💡 Make sure "Mermaid Diagrams for Confluence" app is installed');
+        getLogger().warn('⚠️  No Mermaid-related macros detected');
+        getLogger().info('💡 Make sure "Mermaid Diagrams for Confluence" app is installed');
       }
       
     } catch (error) {
-      logger.error('Debug failed', error);
+      getLogger().error('Debug failed', error);
       process.exit(1);
     }
   });
@@ -558,7 +582,7 @@ program
         throw new Error(`Input file not found: ${inputPath}`);
       }
 
-      logger.info(`Generating SVG from: ${inputFile}`);
+      getLogger().info(`Generating SVG from: ${inputFile}`);
 
       // Load and parse the input file
       const inputContent = await fs.readFile(inputPath, 'utf-8');
@@ -570,7 +594,7 @@ program
 
       const baseName = modelData.name ? modelData.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') : 'model';
       
-      logger.info(`Processing model: ${modelData.name || 'Unnamed Model'}`);
+      getLogger().info(`Processing model: ${modelData.name || 'Unnamed Model'}`);
 
       // Create the domain model from the input data
       const model = await modelCreator.importDomainModel(modelData);
@@ -613,7 +637,7 @@ program
         // Sync with Confluence
         if (modelCreator.getConfig().confluence && modelCreator.getConfig().confluence.baseUrl) {
           try {
-            logger.info('Syncing with Confluence...');
+            getLogger().info('Syncing with Confluence...');
             confluencePageId = await modelCreator.syncWithConfluence(
               model,
               diagram,
@@ -624,7 +648,7 @@ program
               }
             );
           } catch (error) {
-            logger.warn('Failed to sync with Confluence', error);
+            getLogger().warn('Failed to sync with Confluence', error);
           }
         }
       }
@@ -645,7 +669,7 @@ program
       const summaryPath = path.join(modelOutputDir, `${baseName}-summary.json`);
       await fs.writeFile(summaryPath, JSON.stringify(summary, null, 2));
 
-      logger.info('SVG generation completed successfully!');
+      getLogger().info('SVG generation completed successfully!');
       console.log('\n=== Generation Summary ===');
       console.log(`Model: ${model.name}`);
       console.log(`SVG Path: ${svgPath}`);
@@ -661,7 +685,7 @@ program
       console.log(`Summary: ${summaryPath}`);
 
     } catch (error) {
-      logger.error('Failed to generate SVG diagram', error);
+      getLogger().error('Failed to generate SVG diagram', error);
       process.exit(1);
     }
   });
@@ -687,18 +711,18 @@ program
         throw new Error(`Input directory not found: ${inputDir}`);
       }
 
-      logger.info(`Processing input models from: ${inputDir}`);
+      getLogger().info(`Processing input models from: ${inputDir}`);
 
       // Find all JSON files in input directory
       const inputFiles = await fs.readdir(inputDir);
       const jsonFiles = inputFiles.filter(file => file.endsWith('.json'));
 
       if (jsonFiles.length === 0) {
-        logger.warn('No JSON input files found in input directory');
+        getLogger().warn('No JSON input files found in input directory');
         return;
       }
 
-      logger.info(`Found ${jsonFiles.length} input model files`);
+      getLogger().info(`Found ${jsonFiles.length} input model files`);
 
       const results = [];
 
@@ -707,10 +731,10 @@ program
         const baseName = path.basename(jsonFile, '.json');
         
         try {
-          logger.info(`\n📋 Processing: ${jsonFile}`);
+          getLogger().info(`\n📋 Processing: ${jsonFile}`);
 
           if (options.dryRun) {
-            logger.info(`[DRY RUN] Would process: ${jsonFile}`);
+            getLogger().info(`[DRY RUN] Would process: ${jsonFile}`);
             continue;
           }
 
@@ -782,10 +806,10 @@ program
           };
 
           results.push(result);
-          logger.info(`✅ Processed successfully: ${jsonFile}`);
+          getLogger().info(`✅ Processed successfully: ${jsonFile}`);
 
         } catch (error) {
-          logger.error(`❌ Failed to process ${jsonFile}`, error);
+          getLogger().error(`❌ Failed to process ${jsonFile}`, error);
           results.push({
             inputFile: jsonFile,
             status: 'failed',
@@ -806,14 +830,14 @@ program
         results
       }, null, 2));
 
-      logger.info(`\n📊 Processing Summary:`);
-      logger.info(`Total files: ${jsonFiles.length}`);
-      logger.info(`Successful: ${results.filter(r => r.status === 'success').length}`);
-      logger.info(`Failed: ${results.filter(r => r.status === 'failed').length}`);
-      logger.info(`Summary saved to: ${summaryPath}`);
+      getLogger().info(`\n📊 Processing Summary:`);
+      getLogger().info(`Total files: ${jsonFiles.length}`);
+      getLogger().info(`Successful: ${results.filter(r => r.status === 'success').length}`);
+      getLogger().info(`Failed: ${results.filter(r => r.status === 'failed').length}`);
+      getLogger().info(`Summary saved to: ${summaryPath}`);
 
     } catch (error) {
-      logger.error('Failed to process input models', error);
+      getLogger().error('Failed to process input models', error);
       process.exit(1);
     }
   });
@@ -832,7 +856,7 @@ program
       const inputDir = path.resolve(options.inputDir);
       const outputDir = path.resolve(options.outputDir);
 
-      logger.info('Checking input models status...');
+      getLogger().info('Checking input models status...');
 
       if (!await fs.pathExists(inputDir)) {
         console.log(`❌ Input directory not found: ${inputDir}`);
@@ -900,7 +924,7 @@ program
       }
 
     } catch (error) {
-      logger.error('Failed to get input models status', error);
+      getLogger().error('Failed to get input models status', error);
       process.exit(1);
     }
   });
@@ -914,7 +938,7 @@ program
     try {
       const baseDir = path.resolve(options.baseDir);
       
-      logger.info('Initializing input model management structure...');
+      getLogger().info('Initializing input model management structure...');
 
       // Create directory structure
       const directories = [
@@ -928,7 +952,7 @@ program
       for (const dir of directories) {
         const dirPath = path.join(baseDir, dir);
         await fs.ensureDir(dirPath);
-        logger.info(`Created directory: ${dirPath}`);
+        getLogger().info(`Created directory: ${dirPath}`);
       }
 
       // Create example input file
@@ -962,7 +986,7 @@ program
         };
         
         await fs.writeFile(exampleInputPath, JSON.stringify(exampleModel, null, 2));
-        logger.info(`Created example input file: ${exampleInputPath}`);
+        getLogger().info(`Created example input file: ${exampleInputPath}`);
       }
 
       // Create README for inputs
@@ -1026,9 +1050,9 @@ Each JSON file should contain a domain model with the following structure:
 `;
 
       await fs.writeFile(readmePath, readmeContent);
-      logger.info(`Created README: ${readmePath}`);
+      getLogger().info(`Created README: ${readmePath}`);
 
-      logger.info('✅ Input model management structure initialized successfully!');
+      getLogger().info('✅ Input model management structure initialized successfully!');
       
       console.log('\n📁 Directory Structure Created:');
       console.log('├── inputs/           - Place your input model JSON files here');
@@ -1045,7 +1069,7 @@ Each JSON file should contain a domain model with the following structure:
       console.log('3. Check status: model-creator input-status');
 
     } catch (error) {
-      logger.error('Failed to initialize input model structure', error);
+      getLogger().error('Failed to initialize input model structure', error);
       process.exit(1);
     }
   });
@@ -1064,7 +1088,7 @@ program
         return;
       }
 
-      logger.info(`Scanning SVG outputs in: ${outputDir}`);
+      getLogger().info(`Scanning SVG outputs in: ${outputDir}`);
 
       const modelDirs = await fs.readdir(outputDir);
       
@@ -1112,7 +1136,7 @@ program
       }
 
     } catch (error) {
-      logger.error('Failed to list SVG outputs', error);
+      getLogger().error('Failed to list SVG outputs', error);
       process.exit(1);
     }
   });
@@ -1128,7 +1152,7 @@ program
       const inputsDir = path.resolve(options.inputs);
       const outputsDir = path.resolve(options.outputs);
 
-      logger.info('Creating workspace directories...');
+      getLogger().info('Creating workspace directories...');
 
       // Create directories
       await fs.ensureDir(inputsDir);
@@ -1167,7 +1191,7 @@ program
 
         const samplePath = path.join(inputsDir, 'example-model.json');
         await fs.writeFile(samplePath, JSON.stringify(sampleModel, null, 2));
-        logger.info(`Sample model created: ${samplePath}`);
+        getLogger().info(`Sample model created: ${samplePath}`);
       }
 
       // Create README in inputs directory
@@ -1225,19 +1249,19 @@ Each JSON file should contain a complete domain model with the following structu
       console.log(`3. List results: model-creator list-svg`);
 
     } catch (error) {
-      logger.error('Failed to initialize workspace', error);
+      getLogger().error('Failed to initialize workspace', error);
       process.exit(1);
     }
   });
 
 // Set up global error handler
 process.on('unhandledRejection', (reason, promise) => {
-  logger.error('Unhandled Rejection at:', { promise, reason });
+  getLogger().error('Unhandled Rejection at:', { promise, reason });
   process.exit(1);
 });
 
 process.on('uncaughtException', (error) => {
-  logger.error('Uncaught Exception:', error);
+  getLogger().error('Uncaught Exception:', error);
   process.exit(1);
 });
 

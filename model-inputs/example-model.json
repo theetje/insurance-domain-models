@@ -1,13 +1,13 @@
 {
   "name": "Example Insurance Model",
   "version": "1.0.0",
-  "description": "Example SIVI AFD 2.0 compliant insurance model",
-  "namespace": "nl.sivi.afd.example",
+  "description": "Sample SIVI AFD 2.0 insurance model",
+  "namespace": "nl.sivi.afd.insurance",
   "entities": [
     {
       "id": "policy",
       "name": "Policy",
-      "description": "Insurance policy entity",
+      "description": "Insurance policy/contract entity",
       "type": "Policy",
       "attributes": [
         {

@@ -46,15 +46,19 @@ export class ModelCreator {
   /**
    * Initialize ModelCreator with configuration
    */
-  async initialize(configPath?: string): Promise<void> {
+  async initialize(configPath?: string, logLevel?: string): Promise<void> {
     try {
       this.logger.info('Initializing ModelCreator');
 
       // Load configuration
       this.config = await this.configManager.loadConfig(configPath);
       
-      // Initialize logger with config
-      this.logger = Logger.getInstance(this.config.logging);
+      // Initialize logger with config and optional override
+      const loggerConfig = {
+        ...this.config.logging,
+        ...(logLevel && { level: logLevel as 'error' | 'warn' | 'info' | 'debug' })
+      };
+      this.logger = Logger.getInstance(loggerConfig);
 
       // Initialize SIVI service with config
       this.siviService = new SiviService(this.config.sivi.baseUrl, this.config.sivi.version);
