@@ -855,140 +855,128 @@ export class ModelCreator {
   }
 
   /**
-   * Comprehensive sync: Process all input models and create hierarchical Confluence structure
+   * Comprehensive sync of all models to Git and Confluence with hierarchical structure
    */
-  async syncAllModelsFromInputs(
-    inputDirectory: string = './inputs'
-  ): Promise<{
-    indexPageId: string;
+  async syncAllModelsComprehensive(inputModels: Array<{
+    model: DomainModel;
+    inputFile: string;
+  }>): Promise<{
+    gitCommitHash?: string;
+    confluenceIndexPageId?: string;
     modelPages: Array<{
       name: string;
       pageId: string;
       version: string;
       lastUpdated: string;
-      inputFile: string;
       gitPaths: {
         modelPath: string;
         diagramPath: string;
       };
     }>;
-    errors: Array<{
-      file: string;
-      error: string;
-    }>;
   }> {
     try {
-      if (!this.confluenceService) {
-        throw new Error('Confluence service not initialized. Check Confluence configuration.');
-      }
+      this.logger.info(`Starting comprehensive sync for ${inputModels.length} models`);
 
-      this.logger.info(`Starting comprehensive sync from: ${inputDirectory}`);
-
-      const path = require('path');
-      const fs = require('fs-extra');
-
-      const resolvedInputDir = path.resolve(inputDirectory);
-
-      // Prepare models for Git and Confluence sync
-      const modelsToProcess: Array<{
+      const processedModels: Array<{
         model: DomainModel;
         diagram: string;
-        diagramFormat: 'mermaid';
-        gitFileUrls: { modelUrl: string; diagramUrl: string };
-        inputFile: string;
-        gitPaths: { modelPath: string; diagramPath: string };
-      }> = [];
-      const inputFiles = await fs.readdir(resolvedInputDir);
-      const jsonFiles = inputFiles.filter((file: string) => file.endsWith('.json'));
-
-      for (const jsonFile of jsonFiles) {
-        try {
-          const inputPath = path.join(resolvedInputDir, jsonFile);
-          const inputContent = await fs.readFile(inputPath, 'utf-8');
-          const inputModel = JSON.parse(inputContent);
-
-          // Convert input model to complete domain model with metadata
-          const model: DomainModel = {
-            ...inputModel,
-            metadata: inputModel.metadata || {
-              created: new Date().toISOString(),
-              updated: new Date().toISOString(),
-              author: 'Model Creator',
-              siviVersion: '2.0'
-            }
-          };
-
-          // Generate diagram
-          const diagram = await this.generateDiagram(model, 'mermaid');
-
-          // Save to Git if configured
-          let gitPaths = { modelPath: '', diagramPath: '' };
-          if (this.gitService) {
-            const baseName = path.basename(jsonFile, '.json');
-            const modelPath = await this.saveDomainModelToGit(model, `${baseName}.model.json`);
-            const diagramPath = await this.saveDiagramToGit(diagram, `${baseName}-diagram`, 'mermaid');
-            gitPaths = { modelPath, diagramPath };
-          }
-
-          // Build Git URLs
-          const gitFileUrls = {
-            modelUrl: this.buildGitFileUrl(gitPaths.modelPath),
-            diagramUrl: this.buildGitFileUrl(gitPaths.diagramPath)
-          };
-
-          modelsToProcess.push({
-            model,
-            diagram,
-            diagramFormat: 'mermaid' as const,
-            gitFileUrls,
-            inputFile: jsonFile,
-            gitPaths
-          });
-
-        } catch (error) {
-          this.logger.error(`Failed to prepare model ${jsonFile}`, error);
-        }
-      }
-
-      // Commit all Git changes
-      if (this.gitService && modelsToProcess.length > 0) {
-        try {
-          await this.commitAndPushChanges(`Sync all models: ${modelsToProcess.map(m => m.model.name).join(', ')}`);
-          this.logger.info('All changes committed and pushed to Git');
-        } catch (error) {
-          this.logger.warn('Failed to commit changes to Git', error);
-        }
-      }
-
-      // Use the new bulk sync method in ConfluenceService
-      const syncResult = await this.confluenceService.bulkSyncFromInputs(
-        resolvedInputDir,
-        (model: DomainModel) => this.generateDiagram(model, 'mermaid'),
-        (modelPath: string, diagramPath: string) => ({
-          modelUrl: this.buildGitFileUrl(modelPath),
-          diagramUrl: this.buildGitFileUrl(diagramPath)
-        })
-      );
-
-      // Combine results with Git information
-      const modelPagesWithGit = syncResult.modelPages.map(page => {
-        const matchingModel = modelsToProcess.find(m => m.model.name === page.name);
-        return {
-          ...page,
-          gitPaths: matchingModel?.gitPaths || { modelPath: '', diagramPath: '' }
+        diagramFormat: 'mermaid' | 'plantuml';
+        gitFileUrls: {
+          modelUrl: string;
+          diagramUrl: string;
         };
-      });
+      }> = [];
+      
+      const modelPages: Array<{
+        name: string;
+        pageId: string;
+        version: string;
+        lastUpdated: string;
+        gitPaths: {
+          modelPath: string;
+          diagramPath: string;
+        };
+      }> = [];
 
-      this.logger.info(`Comprehensive sync completed. Index: ${syncResult.indexPageId}, Models: ${modelPagesWithGit.length}, Errors: ${syncResult.errors.length}`);
+      // Process each model
+      for (const { model, inputFile } of inputModels) {
+        this.logger.info(`Processing model: ${model.name}`);
+
+        // Generate diagram
+        const diagram = await this.generateDiagram(model, 'mermaid');
+
+        let gitPaths = { modelPath: '', diagramPath: '' };
+
+        // Save to Git if configured
+        if (this.gitService) {
+          const baseName = path.basename(inputFile, '.json');
+          const modelPath = await this.saveDomainModelToGit(model, `${baseName}.model.json`);
+          const diagramPath = await this.saveDiagramToGit(
+            diagram,
+            `${baseName}-diagram`,
+            'mermaid'
+          );
+
+          gitPaths = { modelPath, diagramPath };
+        }
+
+        // Prepare for Confluence sync
+        const gitFileUrls = {
+          modelUrl: this.buildGitFileUrl(gitPaths.modelPath),
+          diagramUrl: this.buildGitFileUrl(gitPaths.diagramPath)
+        };
+
+        processedModels.push({
+          model,
+          diagram,
+          diagramFormat: 'mermaid' as const,
+          gitFileUrls
+        });
+
+        modelPages.push({
+          name: model.name,
+          pageId: '', // Will be filled by Confluence sync
+          version: model.version,
+          lastUpdated: new Date().toISOString(),
+          gitPaths
+        });
+      }
+
+      // Commit all changes to Git
+      let gitCommitHash: string | undefined;
+      if (this.gitService && processedModels.length > 0) {
+        const commitMessage = `Sync all models: ${processedModels.map(m => m.model.name).join(', ')}`;
+        await this.commitAndPushChanges(commitMessage);
+        
+        // Get the latest commit hash
+        const gitStatus = await this.gitService.getStatus();
+        gitCommitHash = gitStatus.lastCommit || undefined;
+      }
+
+      // Sync with Confluence if configured
+      let confluenceIndexPageId: string | undefined;
+      if (this.confluenceService && processedModels.length > 0) {
+        const confluenceResult = await this.confluenceService.syncAllModels(processedModels);
+        confluenceIndexPageId = confluenceResult.indexPageId;
+        
+        // Update modelPages with actual page IDs
+        confluenceResult.modelPages.forEach((confluencePage, index) => {
+          if (modelPages[index]) {
+            modelPages[index].pageId = confluencePage.pageId;
+          }
+        });
+      }
+
+      this.logger.info(`Comprehensive sync completed for ${inputModels.length} models`);
 
       return {
-        indexPageId: syncResult.indexPageId,
-        modelPages: modelPagesWithGit,
-        errors: syncResult.errors
+        gitCommitHash,
+        confluenceIndexPageId,
+        modelPages
       };
 
     } catch (error) {
-      const message = `Failed to sync all models: ${error instanceof Error ? error.message : 'Unknown error'}`;
+      const message = `Failed to sync all models comprehensively: ${error instanceof Error ? error.message : 'Unknown error'}`;
       this.logger.error(message, error);
       throw new ModelCreatorError(message, 'COMPREHENSIVE_SYNC_ERROR', error);
     }

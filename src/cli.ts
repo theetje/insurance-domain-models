@@ -344,7 +344,7 @@ program
 // Comprehensive sync command
 program
   .command('sync-all')
-  .description('Comprehensive sync: Create Confluence index page with subpages for all models')
+  .description('Comprehensive sync of all input models to Git and Confluence with hierarchical structure')
   .option('-i, --input-dir <path>', 'directory containing input model files', './inputs')
   .option('--dry-run', 'show what would be done without executing')
   .action(async (options) => {
@@ -352,64 +352,97 @@ program
       const modelCreator = new ModelCreator();
       await modelCreator.initialize(program.opts().config);
 
-      if (options.dryRun) {
-        getLogger().info(`[DRY RUN] Would sync all models from: ${options.inputDir}`);
-        
-        const fs = require('fs-extra');
-        const path = require('path');
-        const inputDir = path.resolve(options.inputDir);
-        
-        if (!await fs.pathExists(inputDir)) {
-          throw new Error(`Input directory not found: ${inputDir}`);
-        }
+      const inputDir = path.resolve(options.inputDir);
 
-        const inputFiles = await fs.readdir(inputDir);
-        const jsonFiles = inputFiles.filter((file: string) => file.endsWith('.json'));
-        
-        console.log(`\n📋 Found ${jsonFiles.length} input files:`);
-        jsonFiles.forEach((file: string) => console.log(`   - ${file}`));
-        
-        console.log('\n🎯 Would create:');
-        console.log('   - 1 Confluence index page: "Domain Models - SIVI AFD 2.0 Index"');
-        console.log(`   - ${jsonFiles.length} individual model pages (as subpages)`);
-        console.log(`   - Git commits for ${jsonFiles.length} models and diagrams`);
-        
+      if (!await fs.pathExists(inputDir)) {
+        throw new Error(`Input directory not found: ${inputDir}`);
+      }
+
+      getLogger().info(`Starting comprehensive sync from: ${inputDir}`);
+
+      // Find all JSON files in input directory
+      const inputFiles = await fs.readdir(inputDir);
+      const jsonFiles = inputFiles.filter(file => file.endsWith('.json'));
+
+      if (jsonFiles.length === 0) {
+        getLogger().warn('No JSON input files found in input directory');
         return;
       }
 
-      getLogger().info('Starting comprehensive sync of all models...');
+      getLogger().info(`Found ${jsonFiles.length} input model files`);
 
-      const result = await modelCreator.syncAllModelsFromInputs(options.inputDir);
+      const inputModels = [];
 
-      console.log('\n🎉 Comprehensive Sync Completed!');
-      console.log('\n📖 Confluence Structure Created:');
-      console.log(`   Index Page ID: ${result.indexPageId}`);
-      console.log(`   Model Pages: ${result.modelPages.length}`);
-      
-      console.log('\n📋 Model Pages:');
-      result.modelPages.forEach(page => {
-        console.log(`   ✅ ${page.name}`);
-        console.log(`      Page ID: ${page.pageId}`);
-        console.log(`      Version: ${page.version}`);
-        console.log(`      Input File: ${page.inputFile}`);
-        console.log(`      Git Model: ${page.gitPaths.modelPath}`);
-        console.log(`      Git Diagram: ${page.gitPaths.diagramPath}`);
-        console.log('');
-      });
+      // Load all models
+      for (const jsonFile of jsonFiles) {
+        const inputPath = path.join(inputDir, jsonFile);
+        
+        try {
+          const inputContent = await fs.readFile(inputPath, 'utf-8');
+          const model = JSON.parse(inputContent);
+          
+          inputModels.push({
+            model,
+            inputFile: jsonFile
+          });
 
-      if (result.errors.length > 0) {
-        console.log('⚠️  Errors:');
-        result.errors.forEach(error => {
-          console.log(`   ❌ ${error.file}: ${error.error}`);
-        });
+          getLogger().info(`Loaded: ${model.name}`);
+        } catch (error) {
+          getLogger().error(`Failed to load ${jsonFile}`, error);
+        }
       }
 
-      console.log(`\n📊 Summary:`);
-      console.log(`   Total Success: ${result.modelPages.length}`);
-      console.log(`   Total Errors: ${result.errors.length}`);
-      console.log(`   Confluence Index: ${result.indexPageId}`);
+      if (inputModels.length === 0) {
+        getLogger().warn('No valid models found to sync');
+        return;
+      }
 
-      getLogger().info('Comprehensive sync completed successfully!');
+      if (options.dryRun) {
+        console.log('\n=== DRY RUN - Models to be synced ===');
+        inputModels.forEach(({ model, inputFile }) => {
+          console.log(`📋 ${model.name} (${inputFile})`);
+          console.log(`   Version: ${model.version}`);
+          console.log(`   Entities: ${model.entities.length}`);
+        });
+        console.log(`\nTotal: ${inputModels.length} models would be synced`);
+        return;
+      }
+
+      // Perform comprehensive sync
+      console.log('\n🚀 Starting comprehensive sync...');
+      const result = await modelCreator.syncAllModelsComprehensive(inputModels);
+
+      // Generate summary report
+      const summary = {
+        timestamp: new Date().toISOString(),
+        totalModels: inputModels.length,
+        gitCommitHash: result.gitCommitHash,
+        confluenceIndexPageId: result.confluenceIndexPageId,
+        modelPages: result.modelPages,
+        gitRepository: modelCreator.getConfig().git?.repositoryUrl,
+        confluenceSpace: modelCreator.getConfig().confluence?.spaceKey
+      };
+
+      await fs.writeFile('./comprehensive-sync-summary.json', JSON.stringify(summary, null, 2));
+
+      // Display results
+      console.log('\n📋 Comprehensive Sync Summary:');
+      console.log(`   Total Models: ${summary.totalModels}`);
+      console.log(`   Git Commit: ${summary.gitCommitHash || 'N/A'}`);
+      console.log(`   Confluence Index Page: ${summary.confluenceIndexPageId || 'N/A'}`);
+      
+      if (summary.confluenceIndexPageId) {
+        const confluenceUrl = `${modelCreator.getConfig().confluence?.baseUrl}/wiki/spaces/${summary.confluenceSpace}/pages/${summary.confluenceIndexPageId}`;
+        console.log(`   Index Page URL: ${confluenceUrl}`);
+      }
+
+      console.log('\n📄 Individual Model Pages:');
+      result.modelPages.forEach(page => {
+        console.log(`   ✅ ${page.name} → Page ID: ${page.pageId}`);
+      });
+
+      console.log(`\n   Summary saved to: comprehensive-sync-summary.json`);
+      console.log('\n🎉 Comprehensive sync completed successfully!');
 
     } catch (error) {
       getLogger().error('Failed to perform comprehensive sync', error);
