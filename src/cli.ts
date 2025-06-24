@@ -985,14 +985,14 @@ program
   .command('input-status')
   .description('Show status of all input models and their outputs')
   .option('-i, --input-dir <path>', 'directory containing input model files', './inputs')
-  .option('-o, --output-dir <path>', 'base output directory', './output')
+  .option('-s, --svg-dir <path>', 'SVG output directory', './svg-output')
   .action(async (options) => {
     try {
       const modelCreator = new ModelCreator();
       await modelCreator.initialize(program.opts().config);
 
       const inputDir = path.resolve(options.inputDir);
-      const outputDir = path.resolve(options.outputDir);
+      const svgDir = path.resolve(options.svgDir);
 
       getLogger().info('Checking input models status...');
 
@@ -1015,12 +1015,15 @@ program
       for (const jsonFile of jsonFiles) {
         const inputPath = path.join(inputDir, jsonFile);
         const baseName = path.basename(jsonFile, '.json');
-        const modelOutputDir = path.join(outputDir, baseName);
 
         try {
           // Load input model
           const inputContent = await fs.readFile(inputPath, 'utf-8');
           const modelData = JSON.parse(inputContent);
+
+          // Generate SVG directory name using the same logic as generate-svg command
+          const svgBaseName = modelData.name ? modelData.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') : baseName;
+          const modelSvgDir = path.join(svgDir, svgBaseName);
 
           console.log(`📋 ${modelData.name}`);
           console.log(`   Input File: ${jsonFile}`);
@@ -1028,41 +1031,45 @@ program
           console.log(`   Entities: ${modelData.entities.length}`);
 
           // Check for SVG output
-          const svgPath = path.join(modelOutputDir, `${baseName}-diagram.svg`);
+          const svgPath = path.join(modelSvgDir, `${svgBaseName}-diagram.svg`);
           const hasSvg = await fs.pathExists(svgPath);
-          console.log(`   SVG Diagram: ${hasSvg ? '✅' : '❌'} ${hasSvg ? svgPath : 'Not generated'}`);
+          console.log(`   SVG Diagram: ${hasSvg ? '✅' : '❌'} ${hasSvg ? 'Generated' : 'Not generated'}`);
 
-          // Check for Git model file
-          const gitModelPath = path.join(process.cwd(), 'models', `${baseName}.model.json`);
-          const hasGitModel = await fs.pathExists(gitModelPath);
-          console.log(`   Git Model: ${hasGitModel ? '✅' : '❌'} ${hasGitModel ? gitModelPath : 'Not saved'}`);
-
-          // Check for Git diagram file
-          const gitDiagramPath = path.join(process.cwd(), 'diagrams', `${baseName}-diagram.mmd`);
-          const hasGitDiagram = await fs.pathExists(gitDiagramPath);
-          console.log(`   Git Diagram: ${hasGitDiagram ? '✅' : '❌'} ${hasGitDiagram ? gitDiagramPath : 'Not saved'}`);
-
-          // Check processing summary
-          const summaryPath = path.join(outputDir, 'processing-summary.json');
-          if (await fs.pathExists(summaryPath)) {
-            const summary = JSON.parse(await fs.readFile(summaryPath, 'utf-8'));
-            const result = summary.results.find((r: any) => r.inputFile === jsonFile);
-            if (result) {
-              console.log(`   Confluence Page: ${result.confluencePageId ? '✅ ' + result.confluencePageId : '❌ Not synced'}`);
-              console.log(`   Last Processed: ${summary.timestamp}`);
+          if (hasSvg) {
+            // Show SVG details
+            const svgStat = await fs.stat(svgPath);
+            console.log(`   SVG Path: ${svgPath}`);
+            console.log(`   SVG Size: ${(svgStat.size / 1024).toFixed(1)} KB`);
+            
+            // Check for summary file
+            const summaryPath = path.join(modelSvgDir, `${svgBaseName}-summary.json`);
+            if (await fs.pathExists(summaryPath)) {
+              const summary = JSON.parse(await fs.readFile(summaryPath, 'utf-8'));
+              console.log(`   Format: ${summary.format}`);
+              console.log(`   Dimensions: ${summary.width}x${summary.height}`);
+              console.log(`   Generated: ${new Date(summary.timestamp).toLocaleString()}`);
             }
           }
 
-          console.log('');
+          // Check for Git model file (enhanced model with metadata)
+          const gitModelPath = path.join(process.cwd(), 'models', `${svgBaseName}.model.json`);
+          const hasGitModel = await fs.pathExists(gitModelPath);
+          console.log(`   Git Model: ${hasGitModel ? '✅' : '❌'} ${hasGitModel ? 'Saved' : 'Not saved'}`);
 
+          // Check for Git diagram file
+          const gitDiagramPath = path.join(process.cwd(), 'diagrams', `${svgBaseName}-diagram.mmd`);
+          const hasGitDiagram = await fs.pathExists(gitDiagramPath);
+          console.log(`   Git Diagram: ${hasGitDiagram ? '✅' : '❌'} ${hasGitDiagram ? 'Saved' : 'Not saved'}`);
+
+          console.log('');
         } catch (error) {
-          console.log(`❌ Failed to check status for ${jsonFile}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          console.log(`❌ Error processing ${jsonFile}: ${error instanceof Error ? error.message : 'Unknown error'}`);
           console.log('');
         }
       }
 
     } catch (error) {
-      getLogger().error('Failed to get input models status', error);
+      getLogger().error('Failed to check input models status', error);
       process.exit(1);
     }
   });

@@ -1,0 +1,14 @@
+{
+  "modelName": "WIA Insurance Model with Captive Structure",
+  "inputFile": "/Users/thomasdelange/Development/Hienfeld/model-creator/inputs/wia-insurance-model.json",
+  "svgPath": "/Users/thomasdelange/Development/Hienfeld/model-creator/svg-output/wia-insurance-model-with-captive-structure/wia-insurance-model-with-captive-structure-diagram.svg",
+  "format": "mermaid",
+  "width": 1400,
+  "height": 1000,
+  "timestamp": "2025-06-24T19:47:29.146Z",
+  "gitPaths": {
+    "modelPath": "/Users/thomasdelange/Development/Hienfeld/model-creator/models/wia-insurance-model-with-captive-structure.model.json",
+    "diagramPath": "/Users/thomasdelange/Development/Hienfeld/model-creator/diagrams/wia-insurance-model-with-captive-structure-diagram.mmd"
+  },
+  "confluencePageId": "206504046"
+}
