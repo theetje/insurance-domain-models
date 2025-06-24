@@ -1,10 +1,10 @@
-# Image Test Model - Domain Model
+# Final Test Model - Domain Model
 
-Testing automatic image generation and upload to Confluence
+Testing the final state of the image upload functionality
 
 ## Overview
 
-This repository contains the domain model for Image Test Model, built using the SIVI AFD 2.0 standard for Dutch insurance industry.
+This repository contains the domain model for Final Test Model, built using the SIVI AFD 2.0 standard for Dutch insurance industry.
 
 ## Structure
 
@@ -31,7 +31,7 @@ The UML diagrams in this repository are automatically generated from the domain 
 
 ## Version History
 
-- Version 1.0.0 - 2025-06-24T17:09:42.629Z
+- Version 1.0.0 - 2025-06-24T17:11:00.144Z
 
 ## Integration with Confluence
 
