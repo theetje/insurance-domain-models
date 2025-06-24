@@ -1,10 +1,10 @@
-# Test Model - Domain Model
+# WIA Ongevallen Domein Model - Domain Model
 
-A test model
+Insurance domain model based on SIVI AFD 2.0
 
 ## Overview
 
-This repository contains the domain model for Test Model, built using the SIVI AFD 2.0 standard for Dutch insurance industry.
+This repository contains the domain model for WIA Ongevallen Domein Model, built using the SIVI AFD 2.0 standard for Dutch insurance industry.
 
 ## Structure
 
@@ -31,7 +31,7 @@ The UML diagrams in this repository are automatically generated from the domain 
 
 ## Version History
 
-- Version 1.0.0 - 2025-06-24T18:26:45.328Z
+- Version 1.0.0 - 2025-06-24T18:39:07.648Z
 
 ## Integration with Confluence
 
