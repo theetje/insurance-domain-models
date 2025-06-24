@@ -1,0 +1,14 @@
+{
+  "modelName": "Motor Insurance Model",
+  "inputFile": "/Users/thomasdelange/Development/Hienfeld/model-creator/inputs/motor-insurance-model.json",
+  "svgPath": "/Users/thomasdelange/Development/Hienfeld/model-creator/svg-output/motor-insurance-model/motor-insurance-model-diagram.svg",
+  "format": "mermaid",
+  "width": 1400,
+  "height": 1000,
+  "timestamp": "2025-06-24T20:18:22.104Z",
+  "gitPaths": {
+    "modelPath": "/Users/thomasdelange/Development/Hienfeld/model-creator/models/motor-insurance-model.model.json",
+    "diagramPath": "/Users/thomasdelange/Development/Hienfeld/model-creator/diagrams/motor-insurance-model-diagram.mmd"
+  },
+  "confluencePageId": "206504046"
+}
