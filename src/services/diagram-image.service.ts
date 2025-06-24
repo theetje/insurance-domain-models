@@ -209,4 +209,58 @@ ${diagramCode}
       }
     }
   }
+
+  /**
+   * Generate SVG from Mermaid code (for debugging)
+   */
+  async generateSVG(mermaidCode: string, width: number = 1400, height: number = 1000): Promise<string> {
+    const browser = await puppeteer.launch({ headless: true });
+    
+    try {
+      const page = await browser.newPage();
+      await page.setViewport({ width, height });
+
+      // Debug: Log the Mermaid code
+      console.log('=== Generated Mermaid Code ===');
+      console.log(mermaidCode);
+      console.log('=== End Mermaid Code ===');
+
+      const html = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
+        </head>
+        <body>
+          <div id="mermaid">${mermaidCode}</div>
+          <script>
+            mermaid.initialize({ 
+              startOnLoad: true,
+              theme: 'default',
+              logLevel: 'error',
+              securityLevel: 'loose'
+            });
+          </script>
+        </body>
+        </html>
+      `;
+      
+      await page.setContent(html);
+      
+      // Wait for mermaid to render
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Get the SVG content
+      const svgElement = await page.$('#mermaid svg');
+      if (!svgElement) {
+        throw new Error('No SVG element found after Mermaid rendering');
+      }
+      
+      const svgContent = await page.evaluate((element) => element.outerHTML, svgElement);
+      
+      return svgContent;
+    } finally {
+      await browser.close();
+    }
+  }
 }

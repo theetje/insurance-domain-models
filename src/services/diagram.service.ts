@@ -60,7 +60,7 @@ export class DiagramService {
         entity.attributes.forEach(attr => {
           const required = attr.required ? '+' : '-';
           const safeAttrName = this.getMermaidSafeIdentifier(attr.name);
-          // Don't include comments in the attribute definition to avoid syntax issues
+          // Mermaid syntax: visibility + name + type (no comments allowed inside class definitions)
           lines.push(`        ${required}${safeAttrName} ${attr.type}`);
         });
       }

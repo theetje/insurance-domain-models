@@ -541,12 +541,13 @@ program
 // Generate SVG command
 program
   .command('generate-svg')
-  .description('Generate SVG diagram from input model file')
-  .argument('<input-file>', 'path to input model JSON file')
-  .option('-o, --output <path>', 'output directory for SVG file')
+  .description('Generate SVG diagram from model input file')
+  .argument('<input-file>', 'path to JSON model input file')
   .option('-f, --format <format>', 'diagram format (mermaid|plantuml)', 'mermaid')
-  .option('--width <width>', 'SVG width in pixels', '1400')
-  .option('--height <height>', 'SVG height in pixels', '1000')
+  .option('-o, --output <path>', 'output directory (default: ./svg-output)')
+  .option('-w, --width <width>', 'SVG width in pixels', '1400')
+  .option('-h, --height <height>', 'SVG height in pixels', '1000')
+  .option('--svg-only', 'generate only SVG, skip Git and Confluence sync')
   .action(async (inputFile, options) => {
     try {
       const modelCreator = new ModelCreator();
@@ -557,48 +558,107 @@ program
         throw new Error(`Input file not found: ${inputPath}`);
       }
 
-      logger.info(`Generating SVG diagram from: ${inputFile}`);
+      logger.info(`Generating SVG from: ${inputFile}`);
 
       // Load and parse the input file
       const inputContent = await fs.readFile(inputPath, 'utf-8');
       const modelData = JSON.parse(inputContent);
 
-      // Create model from input data
-      const model = await modelCreator.importDomainModel(modelData);
-
-      // Generate diagram
-      const diagram = await modelCreator.generateDiagram(model, options.format as 'mermaid' | 'plantuml');
-
       // Set up output directory
-      const outputDir = options.output ? path.resolve(options.output) : path.join(process.cwd(), 'output', 'svg');
+      const outputDir = path.resolve(options.output || './svg-output');
       await fs.ensureDir(outputDir);
 
-      // Generate SVG file
-      const svgFilename = `${model.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9\-]/g, '')}-diagram.svg`;
-      const svgPath = path.join(outputDir, svgFilename);
+      const baseName = modelData.name ? modelData.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') : 'model';
+      
+      logger.info(`Processing model: ${modelData.name || 'Unnamed Model'}`);
 
-      // Use the diagram image service to generate SVG
+      // Create the domain model from the input data
+      const model = await modelCreator.importDomainModel(modelData);
+
+      // Generate diagram code
+      const diagram = await modelCreator.generateDiagram(model, options.format as 'mermaid' | 'plantuml');
+
+      // Create output directory for this model
+      const modelOutputDir = path.join(outputDir, baseName);
+      await fs.ensureDir(modelOutputDir);
+
+      // Generate SVG
+      const svgPath = path.join(modelOutputDir, `${baseName}-diagram.svg`);
       const DiagramImageService = require('./services/diagram-image.service').DiagramImageService;
       const imageService = new DiagramImageService();
       
       if (options.format === 'mermaid') {
-        await imageService.generateMermaidImage(
-          diagram,
-          svgPath,
-          'svg',
-          parseInt(options.width),
-          parseInt(options.height)
-        );
+        await imageService.generateMermaidImage(diagram, svgPath, 'svg', parseInt(options.width), parseInt(options.height));
       } else {
-        await imageService.generatePlantUMLImage(
-          diagram,
-          svgPath,
-          'svg'
-        );
+        await imageService.generatePlantUMLImage(diagram, svgPath, 'svg');
       }
 
-      logger.info(`SVG diagram generated successfully: ${svgPath}`);
-      console.log(`✅ SVG file created: ${svgPath}`);
+      let gitPaths = { modelPath: '', diagramPath: '' };
+      let confluencePageId = '';
+
+      if (!options.svgOnly) {
+        // Save to Git
+        const modelPath = await modelCreator.saveDomainModelToGit(model, `${baseName}.model.json`);
+        const diagramPath = await modelCreator.saveDiagramToGit(
+          diagram,
+          `${baseName}-diagram`,
+          options.format as 'mermaid' | 'plantuml'
+        );
+
+        gitPaths = { modelPath, diagramPath };
+
+        // Commit changes
+        await modelCreator.commitAndPushChanges(`Add ${model.name} model and SVG diagram`);
+
+        // Sync with Confluence
+        if (modelCreator.getConfig().confluence && modelCreator.getConfig().confluence.baseUrl) {
+          try {
+            logger.info('Syncing with Confluence...');
+            confluencePageId = await modelCreator.syncWithConfluence(
+              model,
+              diagram,
+              options.format as 'mermaid' | 'plantuml',
+              {
+                modelUrl: gitPaths.modelPath,
+                diagramUrl: gitPaths.diagramPath
+              }
+            );
+          } catch (error) {
+            logger.warn('Failed to sync with Confluence', error);
+          }
+        }
+      }
+
+      // Create processing summary
+      const summary = {
+        modelName: model.name,
+        inputFile: inputPath,
+        svgPath,
+        format: options.format,
+        width: parseInt(options.width),
+        height: parseInt(options.height),
+        timestamp: new Date().toISOString(),
+        gitPaths: options.svgOnly ? null : gitPaths,
+        confluencePageId: options.svgOnly ? null : confluencePageId
+      };
+
+      const summaryPath = path.join(modelOutputDir, `${baseName}-summary.json`);
+      await fs.writeFile(summaryPath, JSON.stringify(summary, null, 2));
+
+      logger.info('SVG generation completed successfully!');
+      console.log('\n=== Generation Summary ===');
+      console.log(`Model: ${model.name}`);
+      console.log(`SVG Path: ${svgPath}`);
+      console.log(`Format: ${options.format}`);
+      console.log(`Dimensions: ${options.width}x${options.height}`);
+      if (!options.svgOnly) {
+        console.log(`Git Model: ${gitPaths.modelPath}`);
+        console.log(`Git Diagram: ${gitPaths.diagramPath}`);
+        if (confluencePageId) {
+          console.log(`Confluence Page ID: ${confluencePageId}`);
+        }
+      }
+      console.log(`Summary: ${summaryPath}`);
 
     } catch (error) {
       logger.error('Failed to generate SVG diagram', error);
@@ -986,6 +1046,186 @@ Each JSON file should contain a domain model with the following structure:
 
     } catch (error) {
       logger.error('Failed to initialize input model structure', error);
+      process.exit(1);
+    }
+  });
+
+// List SVG generation results command
+program
+  .command('list-svg')
+  .description('List all generated SVG outputs and their status')
+  .option('-d, --directory <path>', 'SVG output directory to scan', './svg-output')
+  .action(async (options) => {
+    try {
+      const outputDir = path.resolve(options.directory);
+      
+      if (!await fs.pathExists(outputDir)) {
+        console.log('No SVG output directory found');
+        return;
+      }
+
+      logger.info(`Scanning SVG outputs in: ${outputDir}`);
+
+      const modelDirs = await fs.readdir(outputDir);
+      
+      if (modelDirs.length === 0) {
+        console.log('No SVG outputs found');
+        return;
+      }
+
+      console.log('\n=== SVG Generation Results ===\n');
+
+      for (const modelDir of modelDirs) {
+        const modelPath = path.join(outputDir, modelDir);
+        const stat = await fs.stat(modelPath);
+        
+        if (stat.isDirectory()) {
+          try {
+            const summaryPath = path.join(modelPath, `${modelDir}-summary.json`);
+            const svgPath = path.join(modelPath, `${modelDir}-diagram.svg`);
+            
+            if (await fs.pathExists(summaryPath) && await fs.pathExists(svgPath)) {
+              const summary = JSON.parse(await fs.readFile(summaryPath, 'utf-8'));
+              const svgStat = await fs.stat(svgPath);
+              
+              console.log(`📊 ${summary.modelName}`);
+              console.log(`   Format: ${summary.format}`);
+              console.log(`   Dimensions: ${summary.width}x${summary.height}`);
+              console.log(`   Generated: ${new Date(summary.timestamp).toLocaleString()}`);
+              console.log(`   SVG Size: ${(svgStat.size / 1024).toFixed(1)} KB`);
+              console.log(`   SVG Path: ${svgPath}`);
+              if (summary.gitPaths) {
+                console.log(`   Git Model: ${summary.gitPaths.modelPath}`);
+                console.log(`   Git Diagram: ${summary.gitPaths.diagramPath}`);
+              }
+              if (summary.confluencePageId) {
+                console.log(`   Confluence: Page ${summary.confluencePageId}`);
+              }
+              console.log('');
+            } else {
+              console.log(`❌ ${modelDir} (incomplete - missing files)`);
+            }
+          } catch (error) {
+            console.log(`❌ ${modelDir} (failed to read summary)`);
+          }
+        }
+      }
+
+    } catch (error) {
+      logger.error('Failed to list SVG outputs', error);
+      process.exit(1);
+    }
+  });
+
+// Create model directories command
+program
+  .command('init-workspace')
+  .description('Initialize workspace with proper directory structure')
+  .option('-i, --inputs <path>', 'Input models directory', './model-inputs')
+  .option('-o, --outputs <path>', 'SVG outputs directory', './svg-outputs')
+  .action(async (options) => {
+    try {
+      const inputsDir = path.resolve(options.inputs);
+      const outputsDir = path.resolve(options.outputs);
+
+      logger.info('Creating workspace directories...');
+
+      // Create directories
+      await fs.ensureDir(inputsDir);
+      await fs.ensureDir(outputsDir);
+      await fs.ensureDir('./temp');
+
+      // Create sample input file if inputs directory is empty
+      const inputFiles = await fs.readdir(inputsDir);
+      if (inputFiles.length === 0) {
+        const sampleModel = {
+          name: "Example Insurance Model",
+          version: "1.0.0",
+          description: "Sample SIVI AFD 2.0 insurance model",
+          namespace: "nl.sivi.afd.insurance",
+          entities: [
+            {
+              id: "policy",
+              name: "Policy",
+              description: "Insurance policy/contract entity",
+              type: "Policy",
+              attributes: [
+                {
+                  name: "contractNumber",
+                  type: "string",
+                  required: true,
+                  description: "Unique policy contract number",
+                  siviReference: "AFD.Policy.ContractNumber"
+                }
+              ],
+              relationships: [],
+              siviReference: "AFD.Policy",
+              version: "2.0"
+            }
+          ]
+        };
+
+        const samplePath = path.join(inputsDir, 'example-model.json');
+        await fs.writeFile(samplePath, JSON.stringify(sampleModel, null, 2));
+        logger.info(`Sample model created: ${samplePath}`);
+      }
+
+      // Create README in inputs directory
+      const readmeContent = `# Model Inputs
+
+This directory contains JSON model input files for the SIVI AFD 2.0 Model Creator.
+
+## File Format
+
+Each JSON file should contain a complete domain model with the following structure:
+
+\`\`\`json
+{
+  "name": "Model Name",
+  "version": "1.0.0",
+  "description": "Model description",
+  "namespace": "nl.sivi.afd.insurance",
+  "entities": [
+    {
+      "id": "entity-id",
+      "name": "Entity Name",
+      "description": "Entity description",
+      "type": "EntityType",
+      "attributes": [...],
+      "relationships": [...],
+      "siviReference": "AFD.Entity",
+      "version": "2.0"
+    }
+  ]
+}
+\`\`\`
+
+## Usage
+
+1. Create or edit JSON model input files in this directory
+2. Run \`model-creator generate-svg <filename>\` to generate SVG diagrams
+3. Use \`model-creator list-svg\` to see all generated outputs
+
+## Examples
+
+- \`example-model.json\` - Basic sample model
+- Add your own model files here
+`;
+
+      const readmePath = path.join(inputsDir, 'README.md');
+      await fs.writeFile(readmePath, readmeContent);
+
+      console.log('\n=== Workspace Initialized ===');
+      console.log(`Input models directory: ${inputsDir}`);
+      console.log(`SVG outputs directory: ${outputsDir}`);
+      console.log(`Temp directory: ./temp`);
+      console.log('\nNext steps:');
+      console.log(`1. Add model JSON files to: ${inputsDir}`);
+      console.log(`2. Generate SVGs: model-creator generate-svg <model-file.json>`);
+      console.log(`3. List results: model-creator list-svg`);
+
+    } catch (error) {
+      logger.error('Failed to initialize workspace', error);
       process.exit(1);
     }
   });
