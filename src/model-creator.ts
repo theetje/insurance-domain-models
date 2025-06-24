@@ -11,6 +11,8 @@ import { SiviService } from './services/sivi.service';
 import { DiagramService } from './services/diagram.service';
 import { GitService } from './services/git.service';
 import { ConfluenceService } from './services/confluence.service';
+import fs from 'fs-extra';
+import path from 'path';
 
 /**
  * Main ModelCreator class that orchestrates all services
@@ -558,24 +560,293 @@ export class ModelCreator {
    * Update configuration
    */
   async updateConfig(newConfig: Partial<AppConfig>): Promise<void> {
+    this.config = { ...this.config, ...newConfig };
+    await this.configManager.saveConfig(this.config, '.model-creator.json');
+    this.logger.info('Configuration updated successfully');
+  }
+
+  /**
+   * Generate SVG diagram from model data
+   */
+  async generateSvgFromModel(
+    modelData: any,
+    outputPath: string,
+    format: 'mermaid' | 'plantuml' = 'mermaid',
+    width: number = 1400,
+    height: number = 1000
+  ): Promise<string> {
     try {
-      this.config = { ...this.config, ...newConfig };
-      
-      // Re-initialize services if needed
-      if (newConfig.git) {
-        this.gitService = new GitService({ ...this.config.git, ...newConfig.git });
-        await this.gitService.initializeRepository();
+      this.logger.info(`Generating SVG diagram for model: ${modelData.name}`);
+
+      // Import the model data
+      const model = await this.importDomainModel(modelData);
+
+      // Generate diagram code
+      const diagram = await this.generateDiagram(model, format);
+
+      // Ensure output directory exists
+      await fs.ensureDir(path.dirname(outputPath));
+
+      // Use DiagramImageService to generate SVG
+      const DiagramImageService = await import('./services/diagram-image.service');
+      const imageService = new DiagramImageService.DiagramImageService();
+
+      if (format === 'mermaid') {
+        await imageService.generateMermaidImage(diagram, outputPath, 'svg', width, height);
+      } else {
+        await imageService.generatePlantUMLImage(diagram, outputPath, 'svg');
       }
 
-      if (newConfig.confluence) {
-        this.confluenceService = new ConfluenceService({ ...this.config.confluence, ...newConfig.confluence });
-      }
+      this.logger.info(`SVG diagram generated successfully: ${outputPath}`);
+      return outputPath;
 
-      this.logger.info('Configuration updated successfully');
     } catch (error) {
-      const message = `Failed to update configuration: ${error instanceof Error ? error.message : 'Unknown error'}`;
+      const message = `Failed to generate SVG diagram: ${error instanceof Error ? error.message : 'Unknown error'}`;
       this.logger.error(message, error);
-      throw new ModelCreatorError(message, 'CONFIG_UPDATE_ERROR', error);
+      throw new Error(message);
+    }
+  }
+
+  /**
+   * Process multiple input models and generate organized outputs
+   */
+  async processInputModels(
+    inputDir: string,
+    outputDir: string,
+    options: {
+      format?: 'mermaid' | 'plantuml';
+      svgOnly?: boolean;
+      width?: number;
+      height?: number;
+    } = {}
+  ): Promise<Array<{
+    inputFile: string;
+    modelName: string;
+    status: 'success' | 'failed';
+    svgPath?: string;
+    gitPaths?: { modelPath: string; diagramPath: string };
+    confluencePageId?: string;
+    error?: string;
+  }>> {
+    const {
+      format = 'mermaid',
+      svgOnly = false,
+      width = 1400,
+      height = 1000
+    } = options;
+
+    const results = [];
+
+    try {
+      if (!await fs.pathExists(inputDir)) {
+        throw new Error(`Input directory not found: ${inputDir}`);
+      }
+
+      // Find all JSON files in input directory
+      const inputFiles = await fs.readdir(inputDir);
+      const jsonFiles = inputFiles.filter(file => file.endsWith('.json'));
+
+      this.logger.info(`Found ${jsonFiles.length} input model files to process`);
+
+      for (const jsonFile of jsonFiles) {
+        const inputPath = path.join(inputDir, jsonFile);
+        const baseName = path.basename(jsonFile, '.json');
+
+        try {
+          this.logger.info(`Processing: ${jsonFile}`);
+
+          // Load and parse the input file
+          const inputContent = await fs.readFile(inputPath, 'utf-8');
+          const modelData = JSON.parse(inputContent);
+
+          // Create model from input data
+          const model = await this.importDomainModel(modelData);
+
+          // Generate diagram
+          const diagram = await this.generateDiagram(model, format);
+
+          // Create output directory for this model
+          const modelOutputDir = path.join(outputDir, baseName);
+          await fs.ensureDir(modelOutputDir);
+
+          // Generate SVG
+          const svgPath = path.join(modelOutputDir, `${baseName}-diagram.svg`);
+          await this.generateSvgFromModel(modelData, svgPath, format, width, height);
+
+          let gitPaths = { modelPath: '', diagramPath: '' };
+          let confluencePageId = '';
+
+          if (!svgOnly) {
+            // Save to Git
+            const modelPath = await this.saveDomainModelToGit(model, `${baseName}.model.json`);
+            const diagramPath = await this.saveDiagramToGit(
+              diagram,
+              `${baseName}-diagram`,
+              format
+            );
+
+            gitPaths = { modelPath, diagramPath };
+
+            // Commit changes
+            await this.commitAndPushChanges(`Add ${model.name} domain model and diagram`);
+
+            // Sync with Confluence
+            const gitFileUrls = {
+              modelUrl: this.buildGitFileUrl(modelPath),
+              diagramUrl: this.buildGitFileUrl(diagramPath)
+            };
+
+            confluencePageId = await this.syncWithConfluence(
+              model,
+              diagram,
+              format,
+              gitFileUrls
+            );
+          }
+
+          const result = {
+            inputFile: jsonFile,
+            modelName: model.name,
+            status: 'success' as const,
+            svgPath,
+            gitPaths,
+            confluencePageId
+          };
+
+          results.push(result);
+          this.logger.info(`✅ Successfully processed: ${jsonFile}`);
+
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          this.logger.error(`❌ Failed to process ${jsonFile}`, error);
+          
+          results.push({
+            inputFile: jsonFile,
+            modelName: 'Unknown',
+            status: 'failed' as const,
+            error: errorMessage
+          });
+        }
+      }
+
+      return results;
+
+    } catch (error) {
+      const message = `Failed to process input models: ${error instanceof Error ? error.message : 'Unknown error'}`;
+      this.logger.error(message, error);
+      throw new Error(message);
+    }
+  }
+
+  /**
+   * Get status of input models and their outputs
+   */
+  async getInputModelsStatus(
+    inputDir: string,
+    outputDir: string
+  ): Promise<Array<{
+    inputFile: string;
+    modelName: string;
+    version: string;
+    entitiesCount: number;
+    hasSvg: boolean;
+    hasGitModel: boolean;
+    hasGitDiagram: boolean;
+    confluencePageId?: string;
+    lastProcessed?: string;
+    svgPath?: string;
+    gitModelPath?: string;
+    gitDiagramPath?: string;
+  }>> {
+    const status = [];
+
+    try {
+      if (!await fs.pathExists(inputDir)) {
+        throw new Error(`Input directory not found: ${inputDir}`);
+      }
+
+      // Find all JSON files in input directory
+      const inputFiles = await fs.readdir(inputDir);
+      const jsonFiles = inputFiles.filter(file => file.endsWith('.json'));
+
+      // Load processing summary if it exists
+      let processingSummary: any = null;
+      const summaryPath = path.join(outputDir, 'processing-summary.json');
+      if (await fs.pathExists(summaryPath)) {
+        const summaryContent = await fs.readFile(summaryPath, 'utf-8');
+        processingSummary = JSON.parse(summaryContent);
+      }
+
+      for (const jsonFile of jsonFiles) {
+        const inputPath = path.join(inputDir, jsonFile);
+        const baseName = path.basename(jsonFile, '.json');
+        const modelOutputDir = path.join(outputDir, baseName);
+
+        try {
+          // Load input model
+          const inputContent = await fs.readFile(inputPath, 'utf-8');
+          const modelData = JSON.parse(inputContent);
+
+          // Check for SVG output
+          const svgPath = path.join(modelOutputDir, `${baseName}-diagram.svg`);
+          const hasSvg = await fs.pathExists(svgPath);
+
+          // Check for Git model file
+          const gitModelPath = path.join(process.cwd(), 'models', `${baseName}.model.json`);
+          const hasGitModel = await fs.pathExists(gitModelPath);
+
+          // Check for Git diagram file
+          const gitDiagramPath = path.join(process.cwd(), 'diagrams', `${baseName}-diagram.mmd`);
+          const hasGitDiagram = await fs.pathExists(gitDiagramPath);
+
+          // Get processing info from summary
+          let confluencePageId: string | undefined;
+          let lastProcessed: string | undefined;
+
+          if (processingSummary) {
+            const result = processingSummary.results.find((r: any) => r.inputFile === jsonFile);
+            if (result) {
+              confluencePageId = result.confluencePageId;
+              lastProcessed = processingSummary.timestamp;
+            }
+          }
+
+          status.push({
+            inputFile: jsonFile,
+            modelName: modelData.name,
+            version: modelData.version,
+            entitiesCount: modelData.entities.length,
+            hasSvg,
+            hasGitModel,
+            hasGitDiagram,
+            confluencePageId,
+            lastProcessed,
+            svgPath: hasSvg ? svgPath : undefined,
+            gitModelPath: hasGitModel ? gitModelPath : undefined,
+            gitDiagramPath: hasGitDiagram ? gitDiagramPath : undefined
+          });
+
+        } catch (error) {
+          this.logger.error(`Failed to get status for ${jsonFile}`, error);
+          
+          status.push({
+            inputFile: jsonFile,
+            modelName: 'Error loading model',
+            version: 'Unknown',
+            entitiesCount: 0,
+            hasSvg: false,
+            hasGitModel: false,
+            hasGitDiagram: false
+          });
+        }
+      }
+
+      return status;
+
+    } catch (error) {
+      const message = `Failed to get input models status: ${error instanceof Error ? error.message : 'Unknown error'}`;
+      this.logger.error(message, error);
+      throw new Error(message);
     }
   }
 }

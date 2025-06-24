@@ -60,8 +60,8 @@ export class DiagramService {
         entity.attributes.forEach(attr => {
           const required = attr.required ? '+' : '-';
           const safeAttrName = this.getMermaidSafeIdentifier(attr.name);
-          const description = attr.description ? ` // ${attr.description}` : '';
-          lines.push(`        ${required}${safeAttrName} ${attr.type}${description}`);
+          // Don't include comments in the attribute definition to avoid syntax issues
+          lines.push(`        ${required}${safeAttrName} ${attr.type}`);
         });
       }
       
@@ -82,7 +82,9 @@ export class DiagramService {
       model.entities.forEach(entity => {
         entity.relationships.forEach(rel => {
           const sourceClass = this.getMermaidSafeClassName(entity.name);
-          const targetClass = this.getMermaidSafeClassName(rel.target);
+          // Find the target entity and use its proper name
+          const targetEntity = model.entities.find(e => e.id === rel.target || e.name.toLowerCase() === rel.target.toLowerCase());
+          const targetClass = targetEntity ? this.getMermaidSafeClassName(targetEntity.name) : this.getMermaidSafeClassName(rel.target);
           const relationship = this.formatMermaidRelationship(rel);
           const label = rel.description ? ` : ${rel.description}` : '';
           lines.push(`    ${sourceClass} ${relationship} ${targetClass}${label}`);
