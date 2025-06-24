@@ -38,7 +38,7 @@ program
 // Global options
 program
   .option('-c, --config <path>', 'path to configuration file')
-  .option('-v, --verbose', 'enable verbose logging')
+  .option('-v, --verbose', 'enable verbose logging (shows info messages, errors and warnings always shown)')
   .option('--dry-run', 'show what would be done without executing');
 
 // Initialize command
