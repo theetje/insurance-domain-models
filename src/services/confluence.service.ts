@@ -700,6 +700,27 @@ It provides standardized definitions for insurance entities, attributes, and rel
       const imageFilename = filename || path.basename(imagePath);
       this.logger.info(`Uploading image to Confluence page ${pageId}: ${imageFilename}`);
 
+      // Check if attachment already exists and delete it first
+      try {
+        const existingAttachments = await this.client.get(`/content/${pageId}/child/attachment`, {
+          params: {
+            filename: imageFilename
+          }
+        });
+
+        if (existingAttachments.data.results && existingAttachments.data.results.length > 0) {
+          const existingAttachmentId = existingAttachments.data.results[0].id;
+          this.logger.info(`Found existing attachment with same name, deleting: ${existingAttachmentId}`);
+          
+          // Delete the existing attachment
+          await this.client.delete(`/content/${existingAttachmentId}`);
+          this.logger.info(`Existing attachment deleted successfully`);
+        }
+      } catch (checkError) {
+        // If we can't check/delete existing attachment, continue with upload
+        this.logger.debug('Could not check for existing attachment, continuing with upload');
+      }
+
       // Create form data for the upload
       const formData = new FormData();
       const imageStream = fs.createReadStream(imagePath);
