@@ -621,5 +621,11 @@
       "siviReference": "AFD.Clause",
       "version": "2.0"
     }
-  ]
+  ],
+  "metadata": {
+    "created": "2025-06-24T21:11:55.515Z",
+    "updated": "2025-06-24T21:11:55.515Z",
+    "author": "SIVI AFD 2.0 Model Creator",
+    "siviVersion": "2.0"
+  }
 }

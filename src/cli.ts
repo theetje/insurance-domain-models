@@ -3,7 +3,7 @@
 import { Command } from 'commander';
 import { ModelCreator } from './model-creator';
 import { Logger } from './utils/logger';
-import { CLIOptions } from './types';
+import { CLIOptions, DomainModel } from './types';
 import fs from 'fs-extra';
 import path from 'path';
 
@@ -379,7 +379,18 @@ program
         
         try {
           const inputContent = await fs.readFile(inputPath, 'utf-8');
-          const model = JSON.parse(inputContent);
+          const modelData = JSON.parse(inputContent);
+          
+          // Ensure proper model structure with metadata
+          const model: DomainModel = {
+            ...modelData,
+            metadata: {
+              created: modelData.metadata?.created || new Date().toISOString(),
+              updated: modelData.metadata?.updated || new Date().toISOString(),
+              author: modelData.metadata?.author || 'SIVI AFD 2.0 Model Creator',
+              siviVersion: modelData.metadata?.siviVersion || '2.0'
+            }
+          };
           
           inputModels.push({
             model,
