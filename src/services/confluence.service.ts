@@ -345,7 +345,7 @@ ${this.generateDiagramMacro(diagramFormat, gitFileUrls.diagramUrl, diagramConten
   <ac:rich-text-body>
     <ac:structured-macro ac:name="info" ac:schema-version="1">
       <ac:rich-text-body>
-        <p><strong>�️ To see the visual diagram:</strong></p>
+        <p><strong>🏗️ To see the visual diagram:</strong></p>
         <ol>
           <li><strong>Option 1:</strong> Install the <a href="https://marketplace.atlassian.com/apps/1226945/mermaid-diagrams-for-confluence">Mermaid Diagrams for Confluence</a> app</li>
           <li><strong>Option 2:</strong> Use the <a href="https://marketplace.atlassian.com/apps/1211676/git-for-confluence-git-embed">Git for Confluence</a> app to embed from repository</li>
@@ -355,6 +355,12 @@ ${this.generateDiagramMacro(diagramFormat, gitFileUrls.diagramUrl, diagramConten
       </ac:rich-text-body>
     </ac:structured-macro>
 
+    <!-- Try the Mermaid app macro first -->
+    <ac:structured-macro ac:name="mermaid" ac:schema-version="1" ac:macro-id="mermaid-live-diagram">
+      <ac:plain-text-body><![CDATA[${diagramContent}]]></ac:plain-text-body>
+    </ac:structured-macro>
+
+    <!-- Fallback to code block for manual processing -->
     <ac:structured-macro ac:name="code" ac:schema-version="1" ac:macro-id="mermaid-diagram">
       <ac:parameter ac:name="language">mermaid</ac:parameter>
       <ac:parameter ac:name="title">Mermaid Diagram Source</ac:parameter>
