@@ -263,41 +263,6 @@ program
     }
   });
 
-// Generate sequence diagram command
-program
-  .command('sequence')
-  .description('Generate sequence diagram for insurance processes')
-  .argument('<process>', 'process name (policy-creation|claim-processing)')
-  .option('-f, --format <format>', 'diagram format (mermaid|plantuml)', 'mermaid')
-  .option('-o, --output <path>', 'output file path')
-  .action(async (processName, options) => {
-    try {
-      const modelCreator = new ModelCreator();
-      await modelCreator.initialize(program.opts().config);
-
-      logger.info(`Generating sequence diagram for process: ${processName}`);
-
-      const diagram = modelCreator.generateSequenceDiagram(
-        processName as 'policy-creation' | 'claim-processing',
-        options.format as 'mermaid' | 'plantuml'
-      );
-
-      // Output diagram
-      if (options.output) {
-        const outputPath = path.resolve(options.output);
-        await fs.ensureDir(path.dirname(outputPath));
-        await fs.writeFile(outputPath, diagram);
-        logger.info(`Sequence diagram saved to: ${outputPath}`);
-      } else {
-        console.log(diagram);
-      }
-
-    } catch (error) {
-      logger.error('Failed to generate sequence diagram', error);
-      process.exit(1);
-    }
-  });
-
 // Config command
 program
   .command('config')
@@ -472,7 +437,7 @@ program
       if (!models.includes(modelFile)) {
         logger.error(`Model not found: ${modelFile}`);
         console.log('Available models:');
-        models.forEach(model => console.log(`  - ${model}`));
+        models.forEach((model: string) => console.log(`  - ${model}`));
         process.exit(1);
       }
 
@@ -526,6 +491,49 @@ program
 
     } catch (error) {
       logger.error('Failed to remove domain model', error);
+      process.exit(1);
+    }
+  });
+
+// Debug confluence command
+program
+  .command('debug-confluence')
+  .description('Debug Confluence integration and check available macros')
+  .action(async () => {
+    try {
+      const modelCreator = new ModelCreator();
+      await modelCreator.initialize(program.opts().config);
+
+      logger.info('Testing Confluence connection and checking macros...');
+      
+      // Test connection
+      const isConnected = await modelCreator.testConfluenceConnection();
+      if (!isConnected) {
+        logger.error('❌ Confluence connection failed');
+        process.exit(1);
+      }
+      
+      logger.info('✅ Confluence connection successful');
+      
+      // Fetch available macros
+      const macros = await modelCreator.getConfluenceMacros();
+      logger.info(`📋 Available macros (${macros.length}): ${macros.join(', ')}`);
+      
+      // Check specifically for Mermaid-related macros
+      const mermaidMacros = macros.filter((macro: string) => 
+        macro.toLowerCase().includes('mermaid') || 
+        macro.toLowerCase().includes('diagram')
+      );
+      
+      if (mermaidMacros.length > 0) {
+        logger.info(`🎯 Mermaid-related macros found: ${mermaidMacros.join(', ')}`);
+      } else {
+        logger.warn('⚠️  No Mermaid-related macros detected');
+        logger.info('💡 Make sure "Mermaid Diagrams for Confluence" app is installed');
+      }
+      
+    } catch (error) {
+      logger.error('Debug failed', error);
       process.exit(1);
     }
   });

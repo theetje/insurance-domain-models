@@ -1,10 +1,10 @@
-# Mermaid Diagram Test - Domain Model
+# Test Mermaid Model - Domain Model
 
-Simple test to verify Mermaid diagrams appear in Confluence
+Test model to check Mermaid rendering
 
 ## Overview
 
-This repository contains the domain model for Mermaid Diagram Test, built using the SIVI AFD 2.0 standard for Dutch insurance industry.
+This repository contains the domain model for Test Mermaid Model, built using the SIVI AFD 2.0 standard for Dutch insurance industry.
 
 ## Structure
 
@@ -31,7 +31,7 @@ The UML diagrams in this repository are automatically generated from the domain 
 
 ## Version History
 
-- Version 1.0.0 - 2025-06-24T16:23:13.645Z
+- Version 1.0.0 - 2025-06-24T16:57:49.208Z
 
 ## Integration with Confluence
 

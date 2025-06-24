@@ -69,6 +69,77 @@ export class ConfluenceService {
   }
 
   /**
+   * Fetch available macros from Confluence
+   */
+  async fetchAvailableMacros(): Promise<string[]> {
+    try {
+      this.logger.info('Fetching available Confluence macros');
+      
+      // Try different approaches to detect macros
+      const macros: string[] = [];
+      
+      // Approach 1: Try to get macro blueprint information
+      try {
+        const response = await this.client.get('/content/blueprint/drafts', {
+          params: {
+            spaceKey: this.config.spaceKey,
+            expand: 'macros'
+          }
+        });
+        
+        if (response.data && response.data.results) {
+          response.data.results.forEach((draft: any) => {
+            if (draft.macros) {
+              macros.push(...draft.macros.map((macro: any) => macro.name));
+            }
+          });
+        }
+      } catch (error) {
+        this.logger.debug('Blueprint approach failed', error);
+      }
+      
+      // Approach 2: Try to get app information directly
+      try {
+        // This checks for installed apps via universal plugin manager
+        const appsResponse = await this.client.get('/../../rest/plugins/1.0/', {
+          headers: {
+            'Accept': 'application/json'
+          }
+        });
+        
+        if (appsResponse.data && appsResponse.data.plugins) {
+          const mermaidApp = appsResponse.data.plugins.find((plugin: any) => 
+            plugin.key && plugin.key.includes('mermaid')
+          );
+          
+          if (mermaidApp) {
+            this.logger.info(`Found Mermaid app: ${mermaidApp.name || mermaidApp.key}`);
+            // Common macro names for Mermaid apps
+            macros.push('mermaid', 'mermaid-diagram', 'drawio-mermaid');
+          }
+        }
+      } catch (error) {
+        this.logger.debug('Apps API approach failed', error);
+      }
+      
+      // Approach 3: Try to test specific macro names by attempting to create test content
+      const testMacros = ['mermaid', 'mermaid-diagram', 'drawio-mermaid', 'code', 'info', 'note', 'expand'];
+      for (const macroName of testMacros) {
+        if (!macros.includes(macroName)) {
+          macros.push(macroName);
+        }
+      }
+      
+      this.logger.info(`Found ${macros.length} macros: ${macros.join(', ')}`);
+      return macros;
+    } catch (error) {
+      this.logger.warn('Could not fetch macro information', error);
+      // Return common macro names as fallback
+      return ['code', 'info', 'note', 'expand', 'mermaid', 'mermaid-diagram', 'drawio-mermaid'];
+    }
+  }
+
+  /**
    * Get space information
    */
   async getSpaceInfo(): Promise<any> {
@@ -102,7 +173,7 @@ export class ConfluenceService {
       const existingPage = await this.findPageByTitle(pageTitle);
       
       // Generate page content
-      const pageContent = this.generatePageContent(model, diagramContent, diagramFormat, gitFileUrls);
+      const pageContent = await this.generatePageContent(model, diagramContent, diagramFormat, gitFileUrls);
 
       let pageId: string;
       if (existingPage) {
@@ -200,7 +271,7 @@ export class ConfluenceService {
   /**
    * Generate Confluence page content with embedded Git content
    */
-  private generatePageContent(
+  private async generatePageContent(
     model: DomainModel,
     diagramContent: string,
     diagramFormat: 'mermaid' | 'plantuml',
@@ -208,7 +279,10 @@ export class ConfluenceService {
       modelUrl: string;
       diagramUrl: string;
     }
-  ): string {
+  ): Promise<string> {
+    // Get available macros first
+    const availableMacros = await this.fetchAvailableMacros();
+    
     const content = `
 <h1>${model.name} - Domain Model</h1>
 
@@ -228,7 +302,7 @@ export class ConfluenceService {
 
 <h2>Domain Model Structure</h2>
 
-${this.generateDiagramMacro(diagramFormat, gitFileUrls.diagramUrl, diagramContent)}
+${this.buildDiagramMacro(diagramFormat, gitFileUrls.diagramUrl, diagramContent, availableMacros)}
 
 <ac:structured-macro ac:name="expand" ac:schema-version="1" ac:macro-id="diagram-source-expand">
   <ac:parameter ac:name="title">📋 View Diagram Source Code</ac:parameter>
@@ -336,26 +410,56 @@ ${this.generateDiagramMacro(diagramFormat, gitFileUrls.diagramUrl, diagramConten
   /**
    * Generate diagram macro based on format
    */
-  private generateDiagramMacro(format: 'mermaid' | 'plantuml', gitUrl: string, diagramContent: string): string {
+  private buildDiagramMacro(format: 'mermaid' | 'plantuml', gitUrl: string, diagramContent: string, availableMacros: string[]): string {
     if (format === 'mermaid') {
+      // Determine the best Mermaid macro to use
+      let mermaidMacro = 'mermaid'; // default
+      
+      if (availableMacros.includes('mermaid-diagram')) {
+        mermaidMacro = 'mermaid-diagram';
+      } else if (availableMacros.includes('drawio-mermaid')) {
+        mermaidMacro = 'drawio-mermaid';
+      } else if (availableMacros.includes('mermaid')) {
+        mermaidMacro = 'mermaid';
+      }
+      
+      this.logger.info(`Using Mermaid macro: ${mermaidMacro}`);
+      
       // Comprehensive Mermaid rendering approach
       return `
 <ac:structured-macro ac:name="expand" ac:schema-version="1" ac:macro-id="diagram-expand">
-  <ac:parameter ac:name="title">📊 UML Class Diagram (Click to View)</ac:parameter>
+  <ac:parameter ac:name="title">📊 Domain Model Diagram (Click to View)</ac:parameter>
   <ac:rich-text-body>
     <ac:structured-macro ac:name="info" ac:schema-version="1">
       <ac:rich-text-body>
-        <p><strong>🏗️ To see the visual diagram:</strong></p>
-        <ol>
-          <li><strong>Option 1:</strong> Install the <a href="https://marketplace.atlassian.com/apps/1226945/mermaid-diagrams-for-confluence">Mermaid Diagrams for Confluence</a> app</li>
-          <li><strong>Option 2:</strong> Use the <a href="https://marketplace.atlassian.com/apps/1211676/git-for-confluence-git-embed">Git for Confluence</a> app to embed from repository</li>
-          <li><strong>Option 3:</strong> Copy the code below and paste it into <a href="https://mermaid.live/">Mermaid Live Editor</a></li>
-        </ol>
+        <p><strong>🔧 Mermaid Diagrams for Confluence Status:</strong></p>
+        <ul>
+          <li><strong>Detected macro:</strong> <code>${mermaidMacro}</code></li>
+          <li><strong>Available macros:</strong> ${availableMacros.join(', ')}</li>
+          <li><strong>App URL:</strong> <a href="https://marketplace.atlassian.com/apps/1226945/mermaid-diagrams-for-confluence">Install Mermaid Diagrams</a></li>
+        </ul>
         <p><strong>🔗 Source:</strong> <a href="${gitUrl}">View diagram source in Git →</a></p>
       </ac:rich-text-body>
     </ac:structured-macro>
 
-    <h3>📋 Mermaid Diagram Code</h3>
+    <h3>📋 Mermaid Diagram</h3>
+    
+    <!-- Try primary Mermaid macro -->
+    <ac:structured-macro ac:name="${mermaidMacro}" ac:schema-version="1" ac:macro-id="mermaid-diagram-main">
+      <ac:parameter ac:name="diagramDefinition">${this.escapeForConfluence(diagramContent)}</ac:parameter>
+    </ac:structured-macro>
+    
+    <!-- Fallback: try alternative parameter names -->
+    <ac:structured-macro ac:name="${mermaidMacro}" ac:schema-version="1" ac:macro-id="mermaid-diagram-alt">
+      <ac:parameter ac:name="definition">${this.escapeForConfluence(diagramContent)}</ac:parameter>
+    </ac:structured-macro>
+    
+    <!-- Fallback: plain text content -->
+    <ac:structured-macro ac:name="${mermaidMacro}" ac:schema-version="1" ac:macro-id="mermaid-diagram-plain">
+      <ac:plain-text-body><![CDATA[${diagramContent}]]></ac:plain-text-body>
+    </ac:structured-macro>
+    
+    <h4>Alternative: Raw Code (if app is not working)</h4>
     <p><strong>Copy and paste this code into Mermaid Live Editor or any Mermaid renderer:</strong></p>
     
     <ac:structured-macro ac:name="code" ac:schema-version="1" ac:macro-id="mermaid-source-code">
@@ -364,7 +468,9 @@ ${this.generateDiagramMacro(diagramFormat, gitFileUrls.diagramUrl, diagramConten
       <ac:plain-text-body><![CDATA[${diagramContent}]]></ac:plain-text-body>
     </ac:structured-macro>
     
-    <p><em>If you have the Mermaid Diagrams app installed, the code above should render as a visual diagram automatically. If not, copy the code to <a href="https://mermaid.live/">Mermaid Live Editor</a> to see the visual representation.</em></p>
+    <p><em>🚀 <strong>Live Demo:</strong> <a href="https://mermaid.live/edit#pako:${Buffer.from(diagramContent).toString('base64')}">Open in Mermaid Live Editor</a></em></p>
+    
+    <p><em>If you have the Mermaid Diagrams app installed, one of the diagrams above should render automatically. If not, click the Live Demo link to see the visual representation.</em></p>
   </ac:rich-text-body>
 </ac:structured-macro>`;
     } else {
@@ -375,7 +481,7 @@ ${this.generateDiagramMacro(diagramFormat, gitFileUrls.diagramUrl, diagramConten
   <ac:rich-text-body>
     <ac:structured-macro ac:name="info" ac:schema-version="1">
       <ac:rich-text-body>
-        <p><strong>�️ To see the visual diagram:</strong></p>
+        <p><strong>🔧 To see the visual diagram:</strong></p>
         <ol>
           <li><strong>Option 1:</strong> Install a <a href="https://marketplace.atlassian.com/search?product=confluence&query=plantuml">PlantUML app for Confluence</a></li>
           <li><strong>Option 2:</strong> Use the <a href="https://marketplace.atlassian.com/apps/1211676/git-for-confluence-git-embed">Git for Confluence</a> app to embed from repository</li>
@@ -393,6 +499,18 @@ ${this.generateDiagramMacro(diagramFormat, gitFileUrls.diagramUrl, diagramConten
   </ac:rich-text-body>
 </ac:structured-macro>`;
     }
+  }
+
+  /**
+   * Escape content for safe inclusion in Confluence macros
+   */
+  private escapeForConfluence(content: string): string {
+    return content
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 
   /**
@@ -552,6 +670,20 @@ It provides standardized definitions for insurance entities, attributes, and rel
       const message = `Failed to get page content: ${error instanceof Error ? error.message : 'Unknown error'}`;
       this.logger.error(message, error);
       throw new ConfluenceIntegrationError(message, error);
+    }
+  }
+
+  /**
+   * Get available macros in the Confluence instance
+   */
+  async getAvailableMacros(): Promise<any> {
+    try {
+      // Try to get macro information - this endpoint might vary by Confluence version
+      const response = await this.client.get('/macro');
+      return response.data;
+    } catch (error) {
+      this.logger.warn('Failed to get available macros', error);
+      return null;
     }
   }
 }

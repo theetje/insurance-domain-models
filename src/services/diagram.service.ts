@@ -53,13 +53,15 @@ export class DiagramService {
 
     // Generate classes
     model.entities.forEach(entity => {
-      lines.push(`    class ${entity.name} {`);
+      const safeClassName = this.getMermaidSafeClassName(entity.name);
+      lines.push(`    class ${safeClassName} {`);
       
       if (config.showAttributes) {
         entity.attributes.forEach(attr => {
           const required = attr.required ? '+' : '-';
+          const safeAttrName = this.getMermaidSafeIdentifier(attr.name);
           const description = attr.description ? ` // ${attr.description}` : '';
-          lines.push(`        ${required}${attr.name}: ${attr.type}${description}`);
+          lines.push(`        ${required}${safeAttrName} ${attr.type}${description}`);
         });
       }
       
@@ -79,9 +81,11 @@ export class DiagramService {
     if (config.showRelationships) {
       model.entities.forEach(entity => {
         entity.relationships.forEach(rel => {
+          const sourceClass = this.getMermaidSafeClassName(entity.name);
+          const targetClass = this.getMermaidSafeClassName(rel.target);
           const relationship = this.formatMermaidRelationship(rel);
           const label = rel.description ? ` : ${rel.description}` : '';
-          lines.push(`    ${entity.name} ${relationship} ${rel.target}${label}`);
+          lines.push(`    ${sourceClass} ${relationship} ${targetClass}${label}`);
         });
       });
     }
@@ -98,8 +102,9 @@ export class DiagramService {
     // Apply styling
     model.entities.forEach(entity => {
       const styleClass = this.getMermaidStyleClass(entity.type);
+      const safeClassName = this.getMermaidSafeClassName(entity.name);
       if (styleClass) {
-        lines.push(`    class ${entity.name} ${styleClass}`);
+        lines.push(`    class ${safeClassName} ${styleClass}`);
       }
     });
 
@@ -189,27 +194,17 @@ export class DiagramService {
    * Format Mermaid relationship syntax
    */
   private formatMermaidRelationship(rel: SiviEntity['relationships'][0]): string {
-    const cardinalityMap: Record<string, string> = {
-      '1': '"1"',
-      '0..1': '"0..1"',
-      '1..*': '"1..*"',
-      '*': '"*"',
-      '0..*': '"0..*"'
-    };
-
-    const cardinality = cardinalityMap[rel.cardinality] || `"${rel.cardinality}"`;
-
     switch (rel.type) {
       case 'association':
-        return `${cardinality} --> "*"`;
+        return '-->';
       case 'aggregation':
-        return `${cardinality} --o "*"`;
+        return 'o--';
       case 'composition':
-        return `${cardinality} --* "*"`;
+        return '*--';
       case 'inheritance':
         return '<|--';
       default:
-        return `${cardinality} --> "*"`;
+        return '-->';
     }
   }
 
@@ -385,5 +380,25 @@ export class DiagramService {
     lines.push('@enduml');
     
     return lines.join('\n');
+  }
+
+  /**
+   * Convert class name to Mermaid-safe identifier (no spaces, special chars)
+   */
+  private getMermaidSafeClassName(name: string): string {
+    return name
+      .replace(/\s+/g, '')  // Remove spaces
+      .replace(/[^a-zA-Z0-9_]/g, '')  // Remove non-alphanumeric chars except underscore
+      .replace(/^([0-9])/, '_$1');  // Prefix with underscore if starts with number
+  }
+
+  /**
+   * Convert attribute name to Mermaid-safe identifier
+   */
+  private getMermaidSafeIdentifier(name: string): string {
+    return name
+      .replace(/\s+/g, '_')  // Replace spaces with underscores
+      .replace(/[^a-zA-Z0-9_]/g, '')  // Remove non-alphanumeric chars except underscore
+      .replace(/^([0-9])/, '_$1');  // Prefix with underscore if starts with number
   }
 }

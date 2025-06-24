@@ -366,128 +366,121 @@ export class ModelCreator {
   }
 
   /**
-   * Get integration status
+   * Get integration status with all services
    */
   async getIntegrationStatus(): Promise<IntegrationStatus> {
-    try {
-      const status: IntegrationStatus = {
-        git: {
-          connected: false,
-          lastSync: null,
-          branch: 'unknown',
-          commitHash: null
-        },
-        confluence: {
-          connected: false,
-          lastUpdate: null,
-          pageId: null
-        },
-        models: {
-          count: 0,
-          lastModified: null
-        }
-      };
+    const status: IntegrationStatus = {
+      git: {
+        connected: false,
+        lastSync: null,
+        branch: 'main',
+        commitHash: null
+      },
+      confluence: {
+        connected: false,
+        lastUpdate: null,
+        pageId: null
+      },
+      models: {
+        count: 0,
+        lastModified: null
+      }
+    };
 
-      // Check Git status
+    try {
+      // Test Git integration
       if (this.gitService) {
-        try {
-          const gitStatus = await this.gitService.getStatus();
-          status.git = {
-            connected: true,
-            lastSync: new Date().toISOString(),
-            branch: gitStatus.branch,
-            commitHash: gitStatus.lastCommit
-          };
-
-          // Count model files
-          const modelFiles = await this.gitService.listModelFiles();
-          status.models.count = modelFiles.length;
-        } catch (error) {
-          this.logger.warn('Failed to get Git status', error);
+        const gitStatus = await this.gitService.getStatus();
+        status.git.connected = gitStatus !== null;
+        if (gitStatus) {
+          status.git.branch = gitStatus.branch || 'main';
+          status.git.commitHash = gitStatus.lastCommit || null;
         }
       }
 
-      // Check Confluence status
+      // Test Confluence integration
       if (this.confluenceService) {
-        try {
-          const connected = await this.confluenceService.testConnection();
-          status.confluence.connected = connected;
-          if (connected) {
-            status.confluence.lastUpdate = new Date().toISOString();
-          }
-        } catch (error) {
-          this.logger.warn('Failed to test Confluence connection', error);
+        status.confluence.connected = await this.confluenceService.testConnection();
+      }
+
+      // Count models (this is basic - could be enhanced)
+      try {
+        const fs = await import('fs-extra');
+        const modelsDir = './models';
+        if (await fs.pathExists(modelsDir)) {
+          const files = await fs.readdir(modelsDir);
+          status.models.count = files.filter(f => f.endsWith('.json')).length;
         }
+      } catch {
+        // Ignore if models directory doesn't exist
       }
 
-      return status;
     } catch (error) {
-      const message = `Failed to get integration status: ${error instanceof Error ? error.message : 'Unknown error'}`;
-      this.logger.error(message, error);
-      throw new ModelCreatorError(message, 'STATUS_ERROR', error);
+      this.logger.error('Error getting integration status', error);
     }
+
+    return status;
   }
 
   /**
-   * Load existing domain model from Git
+   * Test Confluence connection
    */
-  async loadDomainModelFromGit(filename: string): Promise<DomainModel> {
-    try {
-      if (!this.gitService) {
-        throw new Error('Git service not initialized. Check Git configuration.');
-      }
-
-      this.logger.info(`Loading domain model from Git: ${filename}`);
-      
-      const model = await this.gitService.loadDomainModel(filename);
-      
-      // Validate loaded model
-      this.siviService.validateDomainModel(model);
-      
-      this.logger.info(`Domain model loaded successfully: ${model.name}`);
-      return model;
-    } catch (error) {
-      const message = `Failed to load model from Git: ${error instanceof Error ? error.message : 'Unknown error'}`;
-      this.logger.error(message, error);
-      throw new ModelCreatorError(message, 'GIT_LOAD_ERROR', error);
+  async testConfluenceConnection(): Promise<boolean> {
+    if (!this.confluenceService) {
+      throw new ModelCreatorError('Confluence service not initialized', 'CONFLUENCE_NOT_CONFIGURED');
     }
+    return this.confluenceService.testConnection();
   }
 
   /**
-   * List all available domain models in Git
+   * Get available Confluence macros
+   */
+  async getConfluenceMacros(): Promise<string[]> {
+    if (!this.confluenceService) {
+      throw new ModelCreatorError('Confluence service not initialized', 'CONFLUENCE_NOT_CONFIGURED');
+    }
+    return this.confluenceService.fetchAvailableMacros();
+  }
+
+  /**
+   * List all available domain models
    */
   async listDomainModels(): Promise<string[]> {
     try {
-      if (!this.gitService) {
-        throw new Error('Git service not initialized. Check Git configuration.');
+      const fs = await import('fs-extra');
+      const modelsDir = './models';
+      
+      if (!(await fs.pathExists(modelsDir))) {
+        return [];
       }
-
-      return await this.gitService.listModelFiles();
+      
+      const files = await fs.readdir(modelsDir);
+      return files.filter(f => f.endsWith('.json')).map(f => f.replace('.json', ''));
     } catch (error) {
-      const message = `Failed to list domain models: ${error instanceof Error ? error.message : 'Unknown error'}`;
-      this.logger.error(message, error);
-      throw new ModelCreatorError(message, 'LIST_MODELS_ERROR', error);
+      this.logger.error('Failed to list domain models', error);
+      return [];
     }
   }
 
   /**
-   * Generate sequence diagram for insurance processes
+   * Load domain model from Git repository
    */
-  generateSequenceDiagram(
-    processName: 'policy-creation' | 'claim-processing',
-    format: 'mermaid' | 'plantuml' = 'mermaid'
-  ): string {
+  async loadDomainModelFromGit(modelName: string): Promise<DomainModel> {
     try {
-      this.logger.info(`Generating sequence diagram for process: ${processName}`);
+      const fs = await import('fs-extra');
+      const modelPath = `./models/${modelName}.json`;
       
-      const diagram = this.diagramService.generateSequenceDiagram(processName, format);
+      if (!(await fs.pathExists(modelPath))) {
+        throw new ModelCreatorError(`Model not found: ${modelName}`, 'MODEL_NOT_FOUND');
+      }
       
-      this.logger.info(`Sequence diagram generated for process: ${processName}`);
-      return diagram;
+      const modelData = await fs.readJson(modelPath);
+      this.logger.info(`Loaded domain model: ${modelName}`);
+      return modelData;
     } catch (error) {
-      const message = `Failed to generate sequence diagram: ${error instanceof Error ? error.message : 'Unknown error'}`;
+      const message = `Failed to load domain model ${modelName}: ${error instanceof Error ? error.message : 'Unknown error'}`;
       this.logger.error(message, error);
-      throw new ModelCreatorError(message, 'SEQUENCE_DIAGRAM_ERROR', error);
+      throw new ModelCreatorError(message, 'MODEL_LOAD_ERROR', error);
     }
   }
 
