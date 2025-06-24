@@ -1,0 +1,67 @@
+{
+  "name": "Example Insurance Model",
+  "version": "1.0.0",
+  "description": "Sample SIVI AFD 2.0 insurance model",
+  "namespace": "nl.sivi.afd.insurance",
+  "entities": [
+    {
+      "id": "policy",
+      "name": "Policy",
+      "description": "Insurance policy/contract entity",
+      "type": "Policy",
+      "attributes": [
+        {
+          "name": "contractNumber",
+          "type": "string",
+          "required": true,
+          "description": "Unique policy contract number",
+          "siviReference": "AFD.Policy.ContractNumber",
+          "example": "POL-2025-001"
+        },
+        {
+          "name": "effectiveDate",
+          "type": "Date",
+          "required": true,
+          "description": "Policy effective date",
+          "siviReference": "AFD.Policy.EffectiveDate",
+          "example": "2025-01-01"
+        }
+      ],
+      "relationships": [
+        {
+          "type": "association",
+          "target": "coverage",
+          "cardinality": "1..*",
+          "description": "Policy has coverage"
+        }
+      ],
+      "siviReference": "AFD.Policy",
+      "version": "2.0"
+    },
+    {
+      "id": "coverage",
+      "name": "Coverage",
+      "description": "Insurance coverage details",
+      "type": "Coverage",
+      "attributes": [
+        {
+          "name": "coverageCode",
+          "type": "string",
+          "required": true,
+          "description": "Coverage type code",
+          "siviReference": "AFD.Coverage.Code",
+          "example": "AUTO"
+        }
+      ],
+      "relationships": [],
+      "siviReference": "AFD.Coverage",
+      "version": "2.0"
+    }
+  ],
+  "metadata": {
+    "created": "2025-06-24T19:00:30.600Z",
+    "updated": "2025-06-24T19:00:30.600Z",
+    "author": "SIVI AFD 2.0 Model Creator",
+    "siviVersion": "2.0"
+  }
+}
