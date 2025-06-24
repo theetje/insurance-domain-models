@@ -3,9 +3,9 @@
   "inputFile": "/Users/thomasdelange/Development/Hienfeld/model-creator/inputs/wia-insurance-model.json",
   "svgPath": "/Users/thomasdelange/Development/Hienfeld/model-creator/svg-output/wia-insurance-model-with-captive-structure/wia-insurance-model-with-captive-structure-diagram.svg",
   "format": "mermaid",
-  "width": 1600,
-  "height": 1200,
-  "timestamp": "2025-06-24T20:08:29.945Z",
+  "width": 1400,
+  "height": 1000,
+  "timestamp": "2025-06-24T20:44:32.638Z",
   "gitPaths": null,
   "confluencePageId": null
 }
