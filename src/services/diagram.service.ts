@@ -28,7 +28,7 @@ export class DiagramService {
   }
 
   /**
-   * Generate Mermaid class diagram
+   * Generate Mermaid class diagram with enhanced SIVI AFD 2.0 styling
    */
   private generateMermaidDiagram(model: DomainModel, config: DiagramConfig): string {
     const lines: string[] = [];
@@ -51,7 +51,7 @@ export class DiagramService {
       lines.push('');
     }
 
-    // Generate classes
+    // Generate entities with enhanced class definitions
     model.entities.forEach(entity => {
       const safeClassName = this.getMermaidSafeClassName(entity.name);
       lines.push(`    class ${safeClassName} {`);
@@ -60,16 +60,22 @@ export class DiagramService {
         entity.attributes.forEach(attr => {
           const required = attr.required ? '+' : '-';
           const safeAttrName = this.getMermaidSafeIdentifier(attr.name);
-          // Mermaid syntax: visibility + name + type (no comments allowed inside class definitions)
-          lines.push(`        ${required}${safeAttrName} ${attr.type}`);
+          const typeInfo = attr.type;
+          lines.push(`        ${required}${safeAttrName} ${typeInfo}`);
         });
+      }
+      
+      // Add SIVI metadata as class attributes
+      if (entity.siviReference) {
+        lines.push(`        <<${entity.type}>>`);
+        lines.push(`        +siviRef: ${entity.siviReference}`);
       }
       
       if (config.showMethods) {
         // Add some common methods based on entity type
         const methods = this.getCommonMethods(entity.type);
         methods.forEach(method => {
-          lines.push(`        +${method}()`);
+          lines.push(`        +${method}`);
         });
       }
       
@@ -77,7 +83,7 @@ export class DiagramService {
       lines.push('');
     });
 
-    // Generate relationships if enabled
+    // Generate relationships with enhanced labels
     if (config.showRelationships) {
       model.entities.forEach(entity => {
         entity.relationships.forEach(rel => {
@@ -86,29 +92,42 @@ export class DiagramService {
           const targetEntity = model.entities.find(e => e.id === rel.target || e.name.toLowerCase() === rel.target.toLowerCase());
           const targetClass = targetEntity ? this.getMermaidSafeClassName(targetEntity.name) : this.getMermaidSafeClassName(rel.target);
           const relationship = this.formatMermaidRelationship(rel);
-          const label = rel.description ? ` : ${rel.description}` : '';
-          lines.push(`    ${sourceClass} ${relationship} ${targetClass}${label}`);
+          const label = rel.description ? ` : "${rel.description}"` : '';
+          const cardinality = rel.cardinality ? ` "${rel.cardinality}"` : '';
+          lines.push(`    ${sourceClass} ${relationship} ${targetClass}${label}${cardinality}`);
         });
       });
     }
 
-    // Add styling
+    // Enhanced SIVI AFD 2.0 Styling
     lines.push('');
-    lines.push('    %% Styling for SIVI AFD entities');
-    lines.push('    classDef policyClass fill:#e1f5fe,stroke:#01579b,stroke-width:2px');
-    lines.push('    classDef coverageClass fill:#f3e5f5,stroke:#4a148c,stroke-width:2px');
-    lines.push('    classDef partyClass fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px');
-    lines.push('    classDef claimClass fill:#fff3e0,stroke:#e65100,stroke-width:2px');
+    lines.push('    %% Enhanced SIVI AFD 2.0 Styling');
+    lines.push('    classDef policyClass fill:#e1f5fe,stroke:#01579b,stroke-width:3px,color:#000000');
+    lines.push('    classDef coverageClass fill:#f3e5f5,stroke:#4a148c,stroke-width:3px,color:#000000');
+    lines.push('    classDef partyClass fill:#e8f5e8,stroke:#1b5e20,stroke-width:3px,color:#000000');
+    lines.push('    classDef claimClass fill:#fff3e0,stroke:#e65100,stroke-width:3px,color:#000000');
+    lines.push('    classDef premiumClass fill:#fff8e1,stroke:#f57c00,stroke-width:3px,color:#000000');
+    lines.push('    classDef objectClass fill:#f1f8e9,stroke:#33691e,stroke-width:3px,color:#000000');
+    lines.push('    classDef clauseClass fill:#fce4ec,stroke:#ad1457,stroke-width:3px,color:#000000');
     lines.push('');
     
-    // Apply styling
+    // Apply styling to entities
     model.entities.forEach(entity => {
-      const styleClass = this.getMermaidStyleClass(entity.type);
       const safeClassName = this.getMermaidSafeClassName(entity.name);
+      const styleClass = this.getMermaidStyleClass(entity.type);
       if (styleClass) {
         lines.push(`    class ${safeClassName} ${styleClass}`);
       }
     });
+    
+    // Add SIVI compliance note
+    lines.push('');
+    lines.push('    %% SIVI AFD 2.0 Compliance Notes');
+    const firstEntity = model.entities[0];
+    if (firstEntity) {
+      const firstEntityClass = this.getMermaidSafeClassName(firstEntity.name);
+      lines.push(`    note for ${firstEntityClass} "SIVI AFD 2.0 Compliant\\nNamespace: ${model.namespace || 'nl.sivi.afd'}\\nVersion: ${model.version}"`);
+    }
 
     return lines.join('\n');
   }
@@ -248,17 +267,20 @@ export class DiagramService {
   }
 
   /**
-   * Get Mermaid style class for entity type
+   * Enhanced Mermaid style class mapping for all SIVI AFD 2.0 entity types
    */
   private getMermaidStyleClass(entityType: string): string {
     const styleMap: Record<string, string> = {
       Policy: 'policyClass',
       Coverage: 'coverageClass',
       Party: 'partyClass',
-      Claim: 'claimClass'
+      Claim: 'claimClass',
+      Premium: 'premiumClass',
+      Object: 'objectClass',
+      Clause: 'clauseClass'
     };
 
-    return styleMap[entityType] || '';
+    return styleMap[entityType] || 'policyClass'; // Default to policyClass for unknown types
   }
 
   /**

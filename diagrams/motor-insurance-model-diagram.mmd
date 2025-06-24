@@ -1,0 +1,88 @@
+classDiagram
+
+    %% Domain Model: Motor Insurance Model
+    %% Version: 1.0.0
+    %% Generated: 2025-06-24T20:18:13.978Z
+    %% Based on SIVI AFD 2.0
+
+    class Policy {
+        +policyId string
+        +name string
+        -description string
+        <<Policy>>
+        +siviRef: AFD.Policy
+    }
+
+    class Coverage {
+        +coverageId string
+        +name string
+        -description string
+        <<Coverage>>
+        +siviRef: AFD.Coverage
+    }
+
+    class Party {
+        +partyId string
+        +name string
+        -description string
+        <<Party>>
+        +siviRef: AFD.Party
+    }
+
+    class Claim {
+        +claimId string
+        +name string
+        -description string
+        <<Claim>>
+        +siviRef: AFD.Claim
+    }
+
+    class Premium {
+        +premiumId string
+        +name string
+        -description string
+        <<Premium>>
+        +siviRef: AFD.Premium
+    }
+
+    class Object {
+        +objectId string
+        +name string
+        -description string
+        <<Object>>
+        +siviRef: AFD.Object
+    }
+
+    class Clause {
+        +clauseId string
+        +name string
+        -description string
+        <<Clause>>
+        +siviRef: AFD.Clause
+    }
+
+    Policy o-- Coverage : "Policy includes one or more coverages" "1..*"
+    Policy --> Party : "Policy involves multiple parties" "1..*"
+    Policy --> Premium : "Policy has premium information" "1"
+    Claim --> Policy : "Claim is associated with a policy" "1"
+    Claim --> Coverage : "Claim affects one or more coverages" "1..*"
+
+    %% Enhanced SIVI AFD 2.0 Styling
+    classDef policyClass fill:#e1f5fe,stroke:#01579b,stroke-width:3px,color:#000000
+    classDef coverageClass fill:#f3e5f5,stroke:#4a148c,stroke-width:3px,color:#000000
+    classDef partyClass fill:#e8f5e8,stroke:#1b5e20,stroke-width:3px,color:#000000
+    classDef claimClass fill:#fff3e0,stroke:#e65100,stroke-width:3px,color:#000000
+    classDef premiumClass fill:#fff8e1,stroke:#f57c00,stroke-width:3px,color:#000000
+    classDef objectClass fill:#f1f8e9,stroke:#33691e,stroke-width:3px,color:#000000
+    classDef clauseClass fill:#fce4ec,stroke:#ad1457,stroke-width:3px,color:#000000
+
+    class Policy policyClass
+    class Coverage coverageClass
+    class Party partyClass
+    class Claim claimClass
+    class Premium premiumClass
+    class Object objectClass
+    class Clause clauseClass
+
+    %% SIVI AFD 2.0 Compliance Notes
+    note for Policy "SIVI AFD 2.0 Compliant\nNamespace: nl.sivi.afd.insurance\nVersion: 1.0.0"
