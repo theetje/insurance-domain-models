@@ -496,6 +496,7 @@ export class ModelCreator {
    */
   private buildGitFileUrl(filePath: string): string {
     if (!this.config.git.repositoryUrl) {
+      this.logger.warn('No Git repository URL configured');
       return '';
     }
 
@@ -513,19 +514,31 @@ export class ModelCreator {
     }
     
     // Extract relative path from absolute path
-    const relativePath = filePath.replace(process.cwd() + '/', '');
+    const workingDir = process.cwd();
+    let relativePath = filePath;
+    
+    if (filePath.startsWith(workingDir)) {
+      relativePath = filePath.replace(workingDir + '/', '');
+    } else if (filePath.startsWith('/')) {
+      // If it's an absolute path but not within working directory, extract the filename
+      relativePath = filePath.split('/').slice(-2).join('/'); // Get last 2 parts (folder/file)
+    }
     
     // Build the raw file URL for GitHub/GitLab
     const branch = this.config.git.branch || 'main';
     
+    let fileUrl = '';
     if (baseUrl.includes('github.com')) {
-      return `${baseUrl}/blob/${branch}/${relativePath}`;
+      fileUrl = `${baseUrl}/blob/${branch}/${relativePath}`;
     } else if (baseUrl.includes('gitlab.com')) {
-      return `${baseUrl}/-/blob/${branch}/${relativePath}`;
+      fileUrl = `${baseUrl}/-/blob/${branch}/${relativePath}`;
     } else {
       // Generic Git web interface
-      return `${baseUrl}/blob/${branch}/${relativePath}`;
+      fileUrl = `${baseUrl}/blob/${branch}/${relativePath}`;
     }
+    
+    this.logger.debug(`Built Git URL: ${filePath} -> ${fileUrl}`);
+    return fileUrl;
   }
 
   /**

@@ -2,12 +2,12 @@
   "name": "WIA Verzekering met Captive Constructie",
   "version": "1.0.0",
   "description": "SIVI AFS-compliant WIA insurance model with captive structure including organization, captive, intermediary (Meijers), and insurer (Hienfeld)",
-  "namespace": "nl.sivi.afd.wia.insurance",
+  "namespace": "nl.sivi.afd.insurance",
   "entities": [
     {
       "id": "policy",
-      "name": "WIA Policy",
-      "description": "WIA insurance policy with captive construction",
+      "name": "Policy",
+      "description": "Insurance policy/contract entity",
       "type": "Policy",
       "attributes": [
         {
@@ -15,56 +15,42 @@
           "type": "string",
           "required": true,
           "description": "Unique policy contract number",
-          "siviReference": "AFD.Policy.ContractNumber",
-          "example": "WIA2025-001"
+          "siviReference": "AFD.Policy.ContractNumber"
         },
         {
           "name": "effectiveDate",
           "type": "Date",
           "required": true,
           "description": "Policy effective date",
-          "siviReference": "AFD.Policy.EffectiveDate",
-          "example": "2025-01-01"
+          "siviReference": "AFD.Policy.EffectiveDate"
         },
         {
-          "name": "expiryDate",
+          "name": "expirationDate",
           "type": "Date",
           "required": true,
-          "description": "Policy expiry date",
-          "siviReference": "AFD.Policy.ExpirationDate",
-          "example": "2030-01-01"
+          "description": "Policy expiration date",
+          "siviReference": "AFD.Policy.ExpirationDate"
         },
         {
-          "name": "contractDurationInMonths",
-          "type": "number",
-          "required": true,
-          "description": "Contract duration in months",
-          "siviReference": "AFD.Policy.Duration",
-          "example": 60
-        },
-        {
-          "name": "premiumCollector",
+          "name": "status",
           "type": "string",
           "required": true,
-          "description": "Premium collection frequency (M=Monthly, Q=Quarterly, Y=Yearly)",
-          "siviReference": "AFD.Policy.PremiumFrequency",
-          "example": "M"
+          "description": "Policy status",
+          "siviReference": "AFD.Policy.Status"
         },
         {
-          "name": "collectionMethod",
+          "name": "policyType",
           "type": "string",
           "required": true,
-          "description": "Premium collection method (I=Direct Debit, T=Transfer)",
-          "siviReference": "AFD.Policy.CollectionMethod",
-          "example": "I"
+          "description": "Type of insurance policy",
+          "siviReference": "AFD.Policy.Type"
         },
         {
-          "name": "paymentTermInMonths",
+          "name": "premium",
           "type": "number",
-          "required": true,
-          "description": "Payment term in months",
-          "siviReference": "AFD.Policy.PaymentTerm",
-          "example": 1
+          "required": false,
+          "description": "Policy premium amount",
+          "siviReference": "AFD.Policy.Premium"
         }
       ],
       "relationships": [
@@ -72,357 +58,176 @@
           "type": "aggregation",
           "target": "coverage",
           "cardinality": "1..*",
-          "description": "Policy includes WIA coverage"
+          "description": "Policy includes one or more coverages"
         },
         {
           "type": "association",
           "target": "party",
           "cardinality": "1..*",
-          "description": "Policy involves multiple parties (policyholder, captive, intermediary, insurer)"
+          "description": "Policy involves multiple parties"
         },
         {
           "type": "association",
           "target": "premium",
           "cardinality": "1",
           "description": "Policy has premium information"
-        },
-        {
-          "type": "association",
-          "target": "insuredPerson",
-          "cardinality": "1..*",
-          "description": "Policy covers multiple employees"
         }
       ],
       "siviReference": "AFD.Policy",
       "version": "2.0"
     },
     {
-      "id": "party",
-      "name": "Party",
-      "description": "All parties involved in the WIA insurance chain",
-      "type": "Party",
-      "attributes": [
-        {
-          "name": "partyRole",
-          "type": "string",
-          "required": true,
-          "description": "Role of the party (policyHolder, captive, intermediary, insurer)",
-          "siviReference": "AFD.Party.Role",
-          "example": "policyHolder"
-        },
-        {
-          "name": "organizationName",
-          "type": "string",
-          "required": true,
-          "description": "Name of the organization",
-          "siviReference": "AFD.Party.Name",
-          "example": "Werkgever BV"
-        },
-        {
-          "name": "kvkNumber",
-          "type": "string",
-          "required": true,
-          "description": "Dutch Chamber of Commerce number",
-          "siviReference": "AFD.Party.Registration",
-          "example": "12345678"
-        },
-        {
-          "name": "street",
-          "type": "string",
-          "required": true,
-          "description": "Street name",
-          "siviReference": "AFD.Party.Address.Street",
-          "example": "Hoofdstraat"
-        },
-        {
-          "name": "number",
-          "type": "string",
-          "required": true,
-          "description": "House number",
-          "siviReference": "AFD.Party.Address.Number",
-          "example": "1"
-        },
-        {
-          "name": "postalCode",
-          "type": "string",
-          "required": true,
-          "description": "Postal code",
-          "siviReference": "AFD.Party.Address.PostalCode",
-          "example": "1234AB"
-        },
-        {
-          "name": "city",
-          "type": "string",
-          "required": true,
-          "description": "City name",
-          "siviReference": "AFD.Party.Address.City",
-          "example": "Amsterdam"
-        }
-      ],
-      "relationships": [
-        {
-          "type": "association",
-          "target": "policy",
-          "cardinality": "1..*",
-          "description": "Party participates in one or more policies"
-        }
-      ],
-      "siviReference": "AFD.Party",
-      "version": "2.0"
-    },
-    {
       "id": "coverage",
-      "name": "WIA Coverage",
-      "description": "WIA insurance coverage details",
+      "name": "Coverage",
+      "description": "Insurance coverage details",
       "type": "Coverage",
       "attributes": [
         {
-          "name": "coverageType",
+          "name": "coverageCode",
           "type": "string",
           "required": true,
-          "description": "Type of WIA coverage",
-          "siviReference": "AFD.Coverage.Type",
-          "example": "WIA-excedent"
+          "description": "Coverage type code",
+          "siviReference": "AFD.Coverage.Code"
         },
         {
-          "name": "startDate",
-          "type": "Date",
-          "required": true,
-          "description": "Coverage start date",
-          "siviReference": "AFD.Coverage.StartDate",
-          "example": "2025-01-01"
-        },
-        {
-          "name": "endDate",
-          "type": "Date",
-          "required": true,
-          "description": "Coverage end date",
-          "siviReference": "AFD.Coverage.EndDate",
-          "example": "2030-01-01"
-        },
-        {
-          "name": "insuredAmount",
-          "type": "number",
-          "required": true,
-          "description": "Maximum insured amount in EUR",
-          "siviReference": "AFD.Coverage.Amount",
-          "example": 25000
-        },
-        {
-          "name": "currency",
+          "name": "description",
           "type": "string",
           "required": true,
-          "description": "Currency of the insured amount",
-          "siviReference": "AFD.Coverage.Currency",
-          "example": "EUR"
+          "description": "Coverage description",
+          "siviReference": "AFD.Coverage.Description"
         },
         {
-          "name": "benefitPercentage",
+          "name": "limit",
           "type": "number",
-          "required": true,
-          "description": "Percentage of benefit coverage",
-          "siviReference": "AFD.Coverage.BenefitPercentage",
-          "example": 70
+          "required": false,
+          "description": "Coverage limit amount",
+          "siviReference": "AFD.Coverage.Limit"
+        },
+        {
+          "name": "deductible",
+          "type": "number",
+          "required": false,
+          "description": "Coverage deductible amount",
+          "siviReference": "AFD.Coverage.Deductible"
+        },
+        {
+          "name": "premium",
+          "type": "number",
+          "required": false,
+          "description": "Coverage premium",
+          "siviReference": "AFD.Coverage.Premium"
         }
       ],
       "relationships": [
         {
           "type": "association",
-          "target": "policy",
-          "cardinality": "1",
-          "description": "Coverage belongs to WIA policy"
+          "target": "object",
+          "cardinality": "0..*",
+          "description": "Coverage may apply to insured objects"
         },
         {
           "type": "association",
-          "target": "insuredPerson",
-          "cardinality": "1..*",
-          "description": "Coverage applies to insured employees"
+          "target": "clause",
+          "cardinality": "0..*",
+          "description": "Coverage may have specific clauses"
         }
       ],
       "siviReference": "AFD.Coverage",
       "version": "2.0"
     },
     {
-      "id": "insuredPerson",
-      "name": "Insured Employee",
-      "description": "Employee covered under WIA insurance",
+      "id": "party",
+      "name": "Party",
+      "description": "Parties involved in insurance policy",
       "type": "Party",
       "attributes": [
         {
-          "name": "bsn",
+          "name": "partyId",
           "type": "string",
           "required": true,
-          "description": "Dutch social security number (BSN)",
-          "siviReference": "AFD.Person.BSN",
-          "example": "123456789"
+          "description": "Unique party identifier",
+          "siviReference": "AFD.Party.Id"
         },
         {
-          "name": "firstName",
+          "name": "role",
           "type": "string",
           "required": true,
-          "description": "First name of the employee",
-          "siviReference": "AFD.Person.FirstName",
-          "example": "Jan"
+          "description": "Party role (Insured, Insurer, Broker, etc.)",
+          "siviReference": "AFD.Party.Role"
         },
         {
-          "name": "lastName",
+          "name": "name",
           "type": "string",
           "required": true,
-          "description": "Last name of the employee",
-          "siviReference": "AFD.Person.LastName",
-          "example": "Jansen"
+          "description": "Party name",
+          "siviReference": "AFD.Party.Name"
         },
         {
-          "name": "dateOfBirth",
-          "type": "Date",
-          "required": true,
-          "description": "Date of birth",
-          "siviReference": "AFD.Person.DateOfBirth",
-          "example": "1985-06-15"
-        },
-        {
-          "name": "gender",
+          "name": "address",
           "type": "string",
-          "required": true,
-          "description": "Gender (M=Male, F=Female, X=Other)",
-          "siviReference": "AFD.Person.Gender",
-          "example": "M"
+          "required": false,
+          "description": "Party address",
+          "siviReference": "AFD.Party.Address"
         },
         {
-          "name": "employer",
+          "name": "contactInfo",
           "type": "string",
-          "required": true,
-          "description": "Name of the employer organization",
-          "siviReference": "AFD.Person.Employer",
-          "example": "Werkgever BV"
+          "required": false,
+          "description": "Party contact information",
+          "siviReference": "AFD.Party.Contact"
         }
       ],
-      "relationships": [
-        {
-          "type": "association",
-          "target": "policy",
-          "cardinality": "1",
-          "description": "Employee is covered by WIA policy"
-        },
-        {
-          "type": "association",
-          "target": "coverage",
-          "cardinality": "1..*",
-          "description": "Employee has WIA coverage"
-        },
-        {
-          "type": "association",
-          "target": "claim",
-          "cardinality": "0..*",
-          "description": "Employee may have WIA claims"
-        }
-      ],
-      "siviReference": "AFD.InsuredPerson",
-      "version": "2.0"
-    },
-    {
-      "id": "premium",
-      "name": "WIA Premium",
-      "description": "Premium information for WIA insurance",
-      "type": "Premium",
-      "attributes": [
-        {
-          "name": "amount",
-          "type": "number",
-          "required": true,
-          "description": "Premium amount per payment period",
-          "siviReference": "AFD.Premium.Amount",
-          "example": 150
-        },
-        {
-          "name": "currency",
-          "type": "string",
-          "required": true,
-          "description": "Premium currency",
-          "siviReference": "AFD.Premium.Currency",
-          "example": "EUR"
-        },
-        {
-          "name": "paymentFrequency",
-          "type": "string",
-          "required": true,
-          "description": "Payment frequency",
-          "siviReference": "AFD.Premium.Frequency",
-          "example": "monthly"
-        },
-        {
-          "name": "paymentMethod",
-          "type": "string",
-          "required": true,
-          "description": "Payment method",
-          "siviReference": "AFD.Premium.Method",
-          "example": "directDebit"
-        }
-      ],
-      "relationships": [
-        {
-          "type": "association",
-          "target": "policy",
-          "cardinality": "1",
-          "description": "Premium belongs to WIA policy"
-        }
-      ],
-      "siviReference": "AFD.Premium",
+      "relationships": [],
+      "siviReference": "AFD.Party",
       "version": "2.0"
     },
     {
       "id": "claim",
-      "name": "WIA Claim",
-      "description": "WIA disability claim entity",
+      "name": "Claim",
+      "description": "Insurance claim entity",
       "type": "Claim",
       "attributes": [
         {
           "name": "claimNumber",
           "type": "string",
           "required": true,
-          "description": "Unique WIA claim number",
-          "siviReference": "AFD.Claim.Number",
-          "example": "WIA-CLAIM-2025-001"
+          "description": "Unique claim number",
+          "siviReference": "AFD.Claim.Number"
         },
         {
-          "name": "incidentDate",
+          "name": "claimDate",
           "type": "Date",
           "required": true,
-          "description": "Date of the disability incident",
-          "siviReference": "AFD.Claim.IncidentDate",
-          "example": "2025-03-15"
+          "description": "Claim occurrence date",
+          "siviReference": "AFD.Claim.Date"
         },
         {
           "name": "reportDate",
           "type": "Date",
           "required": true,
-          "description": "Date when claim was reported",
-          "siviReference": "AFD.Claim.ReportDate",
-          "example": "2025-03-20"
+          "description": "Claim report date",
+          "siviReference": "AFD.Claim.ReportDate"
         },
         {
           "name": "status",
           "type": "string",
           "required": true,
-          "description": "Current claim status",
-          "siviReference": "AFD.Claim.Status",
-          "example": "open"
+          "description": "Claim status",
+          "siviReference": "AFD.Claim.Status"
         },
         {
-          "name": "disabilityPercentage",
+          "name": "amount",
           "type": "number",
           "required": false,
-          "description": "Assessed disability percentage",
-          "siviReference": "AFD.Claim.DisabilityPercentage",
-          "example": 35
+          "description": "Claim amount",
+          "siviReference": "AFD.Claim.Amount"
         },
         {
-          "name": "claimAmount",
-          "type": "number",
+          "name": "description",
+          "type": "string",
           "required": false,
-          "description": "Claim payout amount",
-          "siviReference": "AFD.Claim.Amount",
-          "example": 8750
+          "description": "Claim description",
+          "siviReference": "AFD.Claim.Description"
         }
       ],
       "relationships": [
@@ -430,28 +235,146 @@
           "type": "association",
           "target": "policy",
           "cardinality": "1",
-          "description": "Claim is made against WIA policy"
-        },
-        {
-          "type": "association",
-          "target": "insuredPerson",
-          "cardinality": "1",
-          "description": "Claim belongs to insured employee"
+          "description": "Claim is associated with a policy"
         },
         {
           "type": "association",
           "target": "coverage",
-          "cardinality": "1",
-          "description": "Claim falls under WIA coverage"
+          "cardinality": "1..*",
+          "description": "Claim affects one or more coverages"
         }
       ],
       "siviReference": "AFD.Claim",
       "version": "2.0"
+    },
+    {
+      "id": "premium",
+      "name": "Premium",
+      "description": "Insurance premium information",
+      "type": "Premium",
+      "attributes": [
+        {
+          "name": "amount",
+          "type": "number",
+          "required": true,
+          "description": "Premium amount",
+          "siviReference": "AFD.Premium.Amount"
+        },
+        {
+          "name": "currency",
+          "type": "string",
+          "required": true,
+          "description": "Premium currency",
+          "siviReference": "AFD.Premium.Currency"
+        },
+        {
+          "name": "paymentFrequency",
+          "type": "string",
+          "required": true,
+          "description": "Payment frequency",
+          "siviReference": "AFD.Premium.Frequency"
+        },
+        {
+          "name": "dueDate",
+          "type": "Date",
+          "required": false,
+          "description": "Premium due date",
+          "siviReference": "AFD.Premium.DueDate"
+        }
+      ],
+      "relationships": [],
+      "siviReference": "AFD.Premium",
+      "version": "2.0"
+    },
+    {
+      "id": "object",
+      "name": "Object",
+      "description": "Insured object/item",
+      "type": "Object",
+      "attributes": [
+        {
+          "name": "objectId",
+          "type": "string",
+          "required": true,
+          "description": "Unique object identifier",
+          "siviReference": "AFD.Object.Id"
+        },
+        {
+          "name": "type",
+          "type": "string",
+          "required": true,
+          "description": "Object type",
+          "siviReference": "AFD.Object.Type"
+        },
+        {
+          "name": "description",
+          "type": "string",
+          "required": false,
+          "description": "Object description",
+          "siviReference": "AFD.Object.Description"
+        },
+        {
+          "name": "value",
+          "type": "number",
+          "required": false,
+          "description": "Object value",
+          "siviReference": "AFD.Object.Value"
+        },
+        {
+          "name": "location",
+          "type": "string",
+          "required": false,
+          "description": "Object location",
+          "siviReference": "AFD.Object.Location"
+        }
+      ],
+      "relationships": [],
+      "siviReference": "AFD.Object",
+      "version": "2.0"
+    },
+    {
+      "id": "clause",
+      "name": "Clause",
+      "description": "Policy clause or condition",
+      "type": "Clause",
+      "attributes": [
+        {
+          "name": "clauseId",
+          "type": "string",
+          "required": true,
+          "description": "Unique clause identifier",
+          "siviReference": "AFD.Clause.Id"
+        },
+        {
+          "name": "type",
+          "type": "string",
+          "required": true,
+          "description": "Clause type",
+          "siviReference": "AFD.Clause.Type"
+        },
+        {
+          "name": "description",
+          "type": "string",
+          "required": true,
+          "description": "Clause description",
+          "siviReference": "AFD.Clause.Description"
+        },
+        {
+          "name": "text",
+          "type": "string",
+          "required": false,
+          "description": "Full clause text",
+          "siviReference": "AFD.Clause.Text"
+        }
+      ],
+      "relationships": [],
+      "siviReference": "AFD.Clause",
+      "version": "2.0"
     }
   ],
   "metadata": {
-    "created": "2025-06-24T15:42:08.584Z",
-    "updated": "2025-06-24T15:42:08.584Z",
+    "created": "2025-06-24T16:01:27.424Z",
+    "updated": "2025-06-24T16:01:27.424Z",
     "author": "SIVI AFD 2.0 Model Creator",
     "siviVersion": "2.0"
   }
