@@ -514,15 +514,28 @@ export class ModelCreator {
     }
     
     // Extract relative path from absolute path
-    const workingDir = process.cwd();
-    let relativePath = filePath;
+    const workingDir = process.cwd().replace(/\\/g, '/'); // Normalize path separators
+    let relativePath = filePath.replace(/\\/g, '/'); // Normalize path separators
     
-    if (filePath.startsWith(workingDir)) {
-      relativePath = filePath.replace(workingDir + '/', '');
-    } else if (filePath.startsWith('/')) {
+    if (relativePath.startsWith(workingDir)) {
+      relativePath = relativePath.replace(workingDir + '/', '');
+    } else if (relativePath.startsWith('/')) {
       // If it's an absolute path but not within working directory, extract the filename
-      relativePath = filePath.split('/').slice(-2).join('/'); // Get last 2 parts (folder/file)
+      const pathParts = relativePath.split('/');
+      const fileName = pathParts[pathParts.length - 1];
+      
+      // Try to determine folder based on file extension
+      if (fileName.endsWith('.model.json')) {
+        relativePath = `models/${fileName}`;
+      } else if (fileName.endsWith('.mmd') || fileName.endsWith('.puml')) {
+        relativePath = `diagrams/${fileName}`;
+      } else {
+        relativePath = pathParts.slice(-2).join('/'); // Get last 2 parts (folder/file)
+      }
     }
+    
+    // Ensure relativePath doesn't start with /
+    relativePath = relativePath.replace(/^\/+/, '');
     
     // Build the raw file URL for GitHub/GitLab
     const branch = this.config.git.branch || 'main';

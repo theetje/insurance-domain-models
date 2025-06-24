@@ -228,9 +228,6 @@ export class ConfluenceService {
 
 <h2>Domain Model Structure</h2>
 
-<h3>UML Class Diagram</h3>
-<p>The following diagram shows the complete domain model structure:</p>
-
 ${this.generateDiagramMacro(diagramFormat, gitFileUrls.diagramUrl, diagramContent)}
 
 <ac:structured-macro ac:name="expand" ac:schema-version="1" ac:macro-id="diagram-source-expand">
@@ -282,11 +279,14 @@ ${this.generateDiagramMacro(diagramFormat, gitFileUrls.diagramUrl, diagramConten
 <h2>Version Control & Git Integration</h2>
 <p>This model is version-controlled in Git and automatically synchronized with this documentation.</p>
 
-<ac:structured-macro ac:name="code" ac:schema-version="1" ac:macro-id="git-info">
-  <ac:parameter ac:name="language">json</ac:parameter>
+<ac:structured-macro ac:name="expand" ac:schema-version="1" ac:macro-id="model-metadata-expand">
   <ac:parameter ac:name="title">Model Metadata</ac:parameter>
   <ac:rich-text-body>
-    <![CDATA[{
+    <ac:structured-macro ac:name="code" ac:schema-version="1" ac:macro-id="git-info">
+      <ac:parameter ac:name="language">json</ac:parameter>
+      <ac:parameter ac:name="title">Model Metadata</ac:parameter>
+      <ac:rich-text-body>
+        <![CDATA[{
   "name": "${model.name}",
   "version": "${model.version}",
   "namespace": "${model.namespace || 'nl.sivi.afd.insurance'}",
@@ -295,6 +295,8 @@ ${this.generateDiagramMacro(diagramFormat, gitFileUrls.diagramUrl, diagramConten
   "siviVersion": "${model.metadata.siviVersion}",
   "entityCount": ${model.entities.length}
 }]]>
+      </ac:rich-text-body>
+    </ac:structured-macro>
   </ac:rich-text-body>
 </ac:structured-macro>
 
@@ -336,36 +338,54 @@ ${this.generateDiagramMacro(diagramFormat, gitFileUrls.diagramUrl, diagramConten
    */
   private generateDiagramMacro(format: 'mermaid' | 'plantuml', gitUrl: string, diagramContent: string): string {
     if (format === 'mermaid') {
-      // Try to use Mermaid app macro first, with fallback to code block
+      // Try multiple approaches for Mermaid rendering
       return `
-<ac:structured-macro ac:name="info" ac:schema-version="1" ac:macro-id="diagram-info">
+<ac:structured-macro ac:name="expand" ac:schema-version="1" ac:macro-id="diagram-expand">
+  <ac:parameter ac:name="title">📊 UML Class Diagram (Click to View)</ac:parameter>
   <ac:rich-text-body>
-    <p><strong>📊 UML Class Diagram:</strong> This Mermaid diagram shows the complete domain model structure.</p>
-    <p><strong>🔗 Source:</strong> <a href="${gitUrl}">View diagram source in Git →</a></p>
-    <p><em>Install the "Mermaid Diagrams for Confluence" app to render this as a visual diagram.</em></p>
-  </ac:rich-text-body>
-</ac:structured-macro>
+    <ac:structured-macro ac:name="info" ac:schema-version="1">
+      <ac:rich-text-body>
+        <p><strong>�️ To see the visual diagram:</strong></p>
+        <ol>
+          <li><strong>Option 1:</strong> Install the <a href="https://marketplace.atlassian.com/apps/1226945/mermaid-diagrams-for-confluence">Mermaid Diagrams for Confluence</a> app</li>
+          <li><strong>Option 2:</strong> Use the <a href="https://marketplace.atlassian.com/apps/1211676/git-for-confluence-git-embed">Git for Confluence</a> app to embed from repository</li>
+          <li><strong>Option 3:</strong> Copy the code below and paste it into <a href="https://mermaid.live/">Mermaid Live Editor</a></li>
+        </ol>
+        <p><strong>🔗 Source:</strong> <a href="${gitUrl}">View diagram source in Git →</a></p>
+      </ac:rich-text-body>
+    </ac:structured-macro>
 
-<ac:structured-macro ac:name="code" ac:schema-version="1" ac:macro-id="mermaid-diagram">
-  <ac:parameter ac:name="language">mermaid</ac:parameter>
-  <ac:parameter ac:name="title">Interactive Mermaid Diagram</ac:parameter>
-  <ac:rich-text-body><![CDATA[${diagramContent}]]></ac:rich-text-body>
+    <ac:structured-macro ac:name="code" ac:schema-version="1" ac:macro-id="mermaid-diagram">
+      <ac:parameter ac:name="language">mermaid</ac:parameter>
+      <ac:parameter ac:name="title">Mermaid Diagram Source</ac:parameter>
+      <ac:rich-text-body><![CDATA[${diagramContent}]]></ac:rich-text-body>
+    </ac:structured-macro>
+  </ac:rich-text-body>
 </ac:structured-macro>`;
     } else {
-      // Try to use PlantUML app macro first, with fallback to code block
+      // Try multiple approaches for PlantUML rendering
       return `
-<ac:structured-macro ac:name="info" ac:schema-version="1" ac:macro-id="diagram-info">
+<ac:structured-macro ac:name="expand" ac:schema-version="1" ac:macro-id="diagram-expand">
+  <ac:parameter ac:name="title">📊 UML Class Diagram (Click to View)</ac:parameter>
   <ac:rich-text-body>
-    <p><strong>📊 UML Class Diagram:</strong> This PlantUML diagram shows the complete domain model structure.</p>
-    <p><strong>🔗 Source:</strong> <a href="${gitUrl}">View diagram source in Git →</a></p>
-    <p><em>Install a "PlantUML for Confluence" app to render this as a visual diagram.</em></p>
-  </ac:rich-text-body>
-</ac:structured-macro>
+    <ac:structured-macro ac:name="info" ac:schema-version="1">
+      <ac:rich-text-body>
+        <p><strong>�️ To see the visual diagram:</strong></p>
+        <ol>
+          <li><strong>Option 1:</strong> Install a <a href="https://marketplace.atlassian.com/search?product=confluence&query=plantuml">PlantUML app for Confluence</a></li>
+          <li><strong>Option 2:</strong> Use the <a href="https://marketplace.atlassian.com/apps/1211676/git-for-confluence-git-embed">Git for Confluence</a> app to embed from repository</li>
+          <li><strong>Option 3:</strong> Copy the code below and paste it into <a href="https://plantuml.com/plantuml">PlantUML Online Server</a></li>
+        </ol>
+        <p><strong>🔗 Source:</strong> <a href="${gitUrl}">View diagram source in Git →</a></p>
+      </ac:rich-text-body>
+    </ac:structured-macro>
 
-<ac:structured-macro ac:name="code" ac:schema-version="1" ac:macro-id="plantuml-diagram">
-  <ac:parameter ac:name="language">plantuml</ac:parameter>
-  <ac:parameter ac:name="title">Interactive PlantUML Diagram</ac:parameter>
-  <ac:rich-text-body><![CDATA[${diagramContent}]]></ac:rich-text-body>
+    <ac:structured-macro ac:name="code" ac:schema-version="1" ac:macro-id="plantuml-diagram">
+      <ac:parameter ac:name="language">plantuml</ac:parameter>
+      <ac:parameter ac:name="title">PlantUML Diagram Source</ac:parameter>
+      <ac:rich-text-body><![CDATA[${diagramContent}]]></ac:rich-text-body>
+    </ac:structured-macro>
+  </ac:rich-text-body>
 </ac:structured-macro>`;
     }
   }
