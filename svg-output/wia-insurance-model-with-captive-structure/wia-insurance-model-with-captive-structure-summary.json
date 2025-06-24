@@ -5,7 +5,10 @@
   "format": "mermaid",
   "width": 1400,
   "height": 1000,
-  "timestamp": "2025-06-24T20:44:32.638Z",
-  "gitPaths": null,
-  "confluencePageId": null
+  "timestamp": "2025-06-24T20:44:48.206Z",
+  "gitPaths": {
+    "modelPath": "/Users/thomasdelange/Development/Hienfeld/model-creator/models/wia-insurance-model-with-captive-structure.model.json",
+    "diagramPath": "/Users/thomasdelange/Development/Hienfeld/model-creator/diagrams/wia-insurance-model-with-captive-structure-diagram.mmd"
+  },
+  "confluencePageId": "206504046"
 }
