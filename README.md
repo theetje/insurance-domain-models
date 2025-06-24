@@ -1,10 +1,10 @@
-# WIA Ongevallen Domein Model - Domain Model
+# WIA Insurance Model - Domain Model
 
-Insurance domain model based on SIVI AFD 2.0
+Work disability insurance with captive structure
 
 ## Overview
 
-This repository contains the domain model for WIA Ongevallen Domein Model, built using the SIVI AFD 2.0 standard for Dutch insurance industry.
+This repository contains the domain model for WIA Insurance Model, built using the SIVI AFD 2.0 standard for Dutch insurance industry.
 
 ## Structure
 
@@ -31,7 +31,7 @@ The UML diagrams in this repository are automatically generated from the domain 
 
 ## Version History
 
-- Version 1.0.0 - 2025-06-24T18:39:07.648Z
+- Version 1.0.0 - 2025-06-24T19:05:45.284Z
 
 ## Integration with Confluence
 

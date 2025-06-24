@@ -1,0 +1,81 @@
+classDiagram
+
+    %% Domain Model: WIA Insurance Model
+    %% Version: 1.0.0
+    %% Generated: 2025-06-24T19:05:45.285Z
+    %% Based on SIVI AFD 2.0
+
+    class Policy {
+        +contractNumber string
+        +effectiveDate Date
+        +expirationDate Date
+        +status string
+        +policyType string
+        -premium number
+    }
+
+    class Coverage {
+        +coverageCode string
+        +description string
+        -limit number
+        -deductible number
+        -premium number
+    }
+
+    class Party {
+        +partyId string
+        +role string
+        +name string
+        -address string
+        -contactInfo string
+    }
+
+    class Claim {
+        +claimNumber string
+        +claimDate Date
+        +reportDate Date
+        +status string
+        -amount number
+        -description string
+    }
+
+    class Premium {
+        +amount number
+        +currency string
+        +paymentFrequency string
+        -dueDate Date
+    }
+
+    class Object {
+        +objectId string
+        +type string
+        -description string
+        -value number
+        -location string
+    }
+
+    class Clause {
+        +clauseId string
+        +type string
+        +description string
+        -text string
+    }
+
+    Policy o-- Coverage : Policy includes one or more coverages
+    Policy --> Party : Policy involves multiple parties
+    Policy --> Premium : Policy has premium information
+    Coverage --> Object : Coverage may apply to insured objects
+    Coverage --> Clause : Coverage may have specific clauses
+    Claim --> Policy : Claim is associated with a policy
+    Claim --> Coverage : Claim affects one or more coverages
+
+    %% Styling for SIVI AFD entities
+    classDef policyClass fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    classDef coverageClass fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    classDef partyClass fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
+    classDef claimClass fill:#fff3e0,stroke:#e65100,stroke-width:2px
+
+    class Policy policyClass
+    class Coverage coverageClass
+    class Party partyClass
+    class Claim claimClass
