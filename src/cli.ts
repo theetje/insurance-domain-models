@@ -1731,6 +1731,35 @@ The model creator ensures that all generated models:
     }
   });
 
+// Clear Confluence attachments command
+program
+  .command('clear-confluence-attachments')
+  .description('Clear all attachments from Confluence pages (for debugging)')
+  .option('-p, --page-title <title>', 'specific page title to clear attachments from')
+  .option('--dry-run', 'show what would be deleted without actually deleting')
+  .action(async (options) => {
+    try {
+      const logger = getLogger();
+      const modelCreator = await initializeModelCreator();
+
+      logger.info('Clearing Confluence attachments...');
+
+      if (options.pageTitle) {
+        // Clear attachments from specific page
+        await modelCreator.clearPageAttachments(options.pageTitle, options.dryRun);
+        logger.info(`Attachments cleared from page: ${options.pageTitle}`);
+      } else {
+        // Clear attachments from all model pages
+        await modelCreator.clearAllModelAttachments(options.dryRun);
+        logger.info('Attachments cleared from all model pages');
+      }
+
+    } catch (error) {
+      getLogger().error('Failed to clear Confluence attachments', error);
+      process.exit(1);
+    }
+  });
+
 // Set up global error handler
 process.on('unhandledRejection', (reason, promise) => {
   getLogger().error('Unhandled Rejection at:', { promise, reason });

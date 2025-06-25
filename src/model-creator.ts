@@ -981,4 +981,44 @@ export class ModelCreator {
       throw new ModelCreatorError(message, 'COMPREHENSIVE_SYNC_ERROR', error);
     }
   }
+
+  /**
+   * Clear attachments from a specific page by title
+   */
+  async clearPageAttachments(pageTitle: string, dryRun: boolean = false): Promise<void> {
+    try {
+      if (!this.confluenceService) {
+        throw new Error('Confluence service not initialized. Run initialize() first.');
+      }
+
+      this.logger.info(`${dryRun ? '[DRY RUN] ' : ''}Clearing attachments from page: ${pageTitle}`);
+      await this.confluenceService.clearPageAttachmentsByTitle(pageTitle, dryRun);
+      this.logger.info(`Successfully cleared attachments from page: ${pageTitle}`);
+
+    } catch (error) {
+      const message = `Failed to clear page attachments: ${error instanceof Error ? error.message : 'Unknown error'}`;
+      this.logger.error(message, error);
+      throw new ModelCreatorError(message, 'CLEAR_ATTACHMENTS_ERROR', error);
+    }
+  }
+
+  /**
+   * Clear attachments from all model pages
+   */
+  async clearAllModelAttachments(dryRun: boolean = false): Promise<void> {
+    try {
+      if (!this.confluenceService) {
+        throw new Error('Confluence service not initialized. Run initialize() first.');
+      }
+
+      this.logger.info(`${dryRun ? '[DRY RUN] ' : ''}Clearing attachments from all model pages`);
+      await this.confluenceService.clearAllModelAttachments(dryRun);
+      this.logger.info('Successfully cleared attachments from all model pages');
+
+    } catch (error) {
+      const message = `Failed to clear all model attachments: ${error instanceof Error ? error.message : 'Unknown error'}`;
+      this.logger.error(message, error);
+      throw new ModelCreatorError(message, 'CLEAR_ALL_ATTACHMENTS_ERROR', error);
+    }
+  }
 }

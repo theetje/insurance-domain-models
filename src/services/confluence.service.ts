@@ -697,32 +697,52 @@ It provides standardized definitions for insurance entities, attributes, and rel
     filename?: string
   ): Promise<string> {
     try {
-      const imageFilename = filename || path.basename(imagePath);
+      let imageFilename = filename || path.basename(imagePath);
       this.logger.info(`Uploading image to Confluence page ${pageId}: ${imageFilename}`);
 
       // Check if attachment already exists and delete it first
       try {
-        const existingAttachments = await this.client.get(`/content/${pageId}/child/attachment`, {
-          params: {
-            filename: imageFilename
-          }
-        });
+        const existingAttachments = await this.client.get(`/content/${pageId}/child/attachment`);
 
         if (existingAttachments.data.results && existingAttachments.data.results.length > 0) {
-          const existingAttachmentId = existingAttachments.data.results[0].id;
-          this.logger.info(`Found existing attachment with same name, deleting: ${existingAttachmentId}`);
-          
-          // Delete the existing attachment
-          await this.client.delete(`/content/${existingAttachmentId}`);
-          this.logger.info(`Existing attachment deleted successfully`);
+          // Find attachment with matching filename
+          const existingAttachment = existingAttachments.data.results.find(
+            (attachment: any) => attachment.title === imageFilename
+          );
+
+          if (existingAttachment) {
+            this.logger.info(`Found existing attachment with same name, deleting: ${existingAttachment.id}`);
+            
+            try {
+              // Delete the existing attachment
+              await this.client.delete(`/content/${existingAttachment.id}`);
+              this.logger.info(`Existing attachment deleted successfully`);
+              
+              // Add a small delay to ensure deletion is processed
+              await new Promise(resolve => setTimeout(resolve, 2000));
+            } catch (deleteError) {
+              this.logger.warn(`Failed to delete existing attachment, using unique filename instead`, deleteError);
+              // Create unique filename with timestamp
+              const timestamp = Date.now();
+              const extension = path.extname(imageFilename);
+              const baseName = path.basename(imageFilename, extension);
+              imageFilename = `${baseName}-${timestamp}${extension}`;
+              this.logger.info(`Using unique filename: ${imageFilename}`);
+            }
+          }
         }
       } catch (checkError) {
-        // If we can't check/delete existing attachment, continue with upload
-        this.logger.debug('Could not check for existing attachment, continuing with upload');
+        // If we can't check for existing attachments, use unique filename
+        this.logger.debug('Could not check for existing attachment, will use unique filename');
+        const timestamp = Date.now();
+        const extension = path.extname(imageFilename);
+        const baseName = path.basename(imageFilename, extension);
+        imageFilename = `${baseName}-${timestamp}${extension}`;
+        this.logger.info(`Using unique filename: ${imageFilename}`);
       }
 
       // Create form data for the upload
-      const formData = new FormData();
+      let formData = new FormData();
       const imageStream = fs.createReadStream(imagePath);
       
       formData.append('file', imageStream, {
@@ -731,20 +751,70 @@ It provides standardized definitions for insurance entities, attributes, and rel
       });
       formData.append('minorEdit', 'true');
 
-      // Upload the attachment
-      const response = await this.client.post(`/content/${pageId}/child/attachment`, formData, {
-        headers: {
-          ...formData.getHeaders(),
-          'X-Atlassian-Token': 'no-check'
-        }
-      });
+      // Upload the attachment with retry logic
+      let uploadResponse;
+      let retryCount = 0;
+      const maxRetries = 3;
 
-      const attachmentId = response.data.results[0]?.id;
+      while (retryCount < maxRetries) {
+        try {
+          uploadResponse = await this.client.post(`/content/${pageId}/child/attachment`, formData, {
+            headers: {
+              ...formData.getHeaders(),
+              'X-Atlassian-Token': 'no-check'
+            }
+          });
+          break; // Success, exit retry loop
+        } catch (uploadError: any) {
+          retryCount++;
+          
+          if (uploadError.response?.status === 400 && 
+              uploadError.response?.data?.message?.includes('same file name as an existing attachment')) {
+            
+            this.logger.warn(`Upload failed due to duplicate filename (attempt ${retryCount}/${maxRetries}), creating unique filename`);
+            
+            // Create a more unique filename
+            const timestamp = Date.now();
+            const randomId = Math.random().toString(36).substring(2, 8);
+            const extension = path.extname(imageFilename);
+            const baseName = path.basename(imageFilename, extension);
+            imageFilename = `${baseName}-${timestamp}-${randomId}${extension}`;
+            
+            // Recreate form data with new filename
+            const newFormData = new FormData();
+            const newImageStream = fs.createReadStream(imagePath);
+            
+            newFormData.append('file', newImageStream, {
+              filename: imageFilename,
+              contentType: imagePath.endsWith('.svg') ? 'image/svg+xml' : 'image/png'
+            });
+            newFormData.append('minorEdit', 'true');
+            
+            formData = newFormData;
+            
+            if (retryCount < maxRetries) {
+              this.logger.info(`Retrying upload with unique filename: ${imageFilename}`);
+              continue;
+            }
+          }
+          
+          // If it's the last retry or a different error, throw it
+          if (retryCount >= maxRetries) {
+            throw uploadError;
+          }
+        }
+      }
+
+      if (!uploadResponse) {
+        throw new Error('Failed to upload after maximum retries');
+      }
+
+      const attachmentId = uploadResponse.data.results[0]?.id;
       if (!attachmentId) {
         throw new Error('Failed to get attachment ID from upload response');
       }
 
-      this.logger.info(`Image uploaded successfully. Attachment ID: ${attachmentId}`);
+      this.logger.info(`Image uploaded successfully. Attachment ID: ${attachmentId}, Filename: ${imageFilename}`);
       
       // Return the download URL for the attachment
       const downloadUrl = `${this.config.baseUrl}/wiki/download/attachments/${pageId}/${encodeURIComponent(imageFilename)}`;
@@ -942,6 +1012,100 @@ It provides standardized definitions for insurance entities, attributes, and rel
 
     } catch (error) {
       const message = `Failed to set page parent: ${error instanceof Error ? error.message : 'Unknown error'}`;
+      this.logger.error(message, error);
+      throw new ConfluenceIntegrationError(message, error);
+    }
+  }
+
+  /**
+   * Clear all attachments from a specific page
+   */
+  async clearPageAttachments(pageId: string, dryRun: boolean = false): Promise<void> {
+    try {
+      this.logger.info(`${dryRun ? '[DRY RUN] ' : ''}Clearing attachments from page: ${pageId}`);
+
+      // Get all attachments for the page
+      const response = await this.client.get(`/content/${pageId}/child/attachment`);
+      const attachments = response.data.results || [];
+
+      if (attachments.length === 0) {
+        this.logger.info('No attachments found on this page');
+        return;
+      }
+
+      this.logger.info(`Found ${attachments.length} attachments to ${dryRun ? 'preview' : 'delete'}`);
+
+      for (const attachment of attachments) {
+        if (dryRun) {
+          this.logger.info(`[DRY RUN] Would delete: ${attachment.title} (ID: ${attachment.id})`);
+        } else {
+          try {
+            await this.client.delete(`/content/${attachment.id}`);
+            this.logger.info(`Deleted attachment: ${attachment.title} (ID: ${attachment.id})`);
+          } catch (deleteError) {
+            this.logger.error(`Failed to delete attachment ${attachment.title}`, deleteError);
+          }
+        }
+      }
+
+      if (!dryRun) {
+        this.logger.info(`Successfully cleared ${attachments.length} attachments from page`);
+      }
+
+    } catch (error) {
+      const message = `Failed to clear page attachments: ${error instanceof Error ? error.message : 'Unknown error'}`;
+      this.logger.error(message, error);
+      throw new ConfluenceIntegrationError(message, error);
+    }
+  }
+
+  /**
+   * Clear attachments from a page by title
+   */
+  async clearPageAttachmentsByTitle(pageTitle: string, dryRun: boolean = false): Promise<void> {
+    try {
+      const page = await this.findPageByTitle(pageTitle);
+      if (!page) {
+        throw new Error(`Page not found: ${pageTitle}`);
+      }
+
+      await this.clearPageAttachments(page.id, dryRun);
+    } catch (error) {
+      const message = `Failed to clear attachments from page "${pageTitle}": ${error instanceof Error ? error.message : 'Unknown error'}`;
+      this.logger.error(message, error);
+      throw new ConfluenceIntegrationError(message, error);
+    }
+  }
+
+  /**
+   * Clear attachments from all pages in the space that match a pattern
+   */
+  async clearAllModelAttachments(dryRun: boolean = false): Promise<void> {
+    try {
+      this.logger.info(`${dryRun ? '[DRY RUN] ' : ''}Clearing attachments from all model pages in space: ${this.config.spaceKey}`);
+
+      // Get all pages in the space
+      const response = await this.client.get('/content', {
+        params: {
+          spaceKey: this.config.spaceKey,
+          limit: 100,
+          expand: 'version'
+        }
+      });
+
+      const pages = response.data.results || [];
+      this.logger.info(`Found ${pages.length} pages in space`);
+
+      for (const page of pages) {
+        // Clear attachments from each page that looks like a model page
+        if (page.title.includes('Domain Model') || page.title.includes('Model')) {
+          this.logger.info(`Processing page: ${page.title}`);
+          await this.clearPageAttachments(page.id, dryRun);
+        }
+      }
+
+    } catch (error) {
+      const message = `Failed to clear all model attachments: ${error instanceof Error ? error.message : 'Unknown error'}`;
       this.logger.error(message, error);
       throw new ConfluenceIntegrationError(message, error);
     }
