@@ -1,0 +1,285 @@
+{
+  "name": "Collective ongevallenverzekering voor bedrijven",
+  "version": "1.0.0",
+  "description": "SIVI AFD 2.0 compliant collective ongevallenverzekering voor bedrijven domain model",
+  "namespace": "nl.sivi.afd.insurance",
+  "entities": [
+    {
+      "id": "policy",
+      "name": "Policy",
+      "description": "Policy entity for collective ongevallenverzekering voor bedrijven",
+      "type": "Policy",
+      "attributes": [
+        {
+          "name": "policyId",
+          "type": "string",
+          "required": true,
+          "description": "Unique identifier for policy",
+          "siviReference": "AFD.Policy.Id",
+          "example": "POLICY-001"
+        },
+        {
+          "name": "name",
+          "type": "string",
+          "required": true,
+          "description": "Name of the policy",
+          "siviReference": "AFD.Policy.Name",
+          "example": "Example Policy"
+        },
+        {
+          "name": "description",
+          "type": "string",
+          "required": false,
+          "description": "Description of the policy",
+          "siviReference": "AFD.Policy.Description",
+          "example": "Detailed description of policy"
+        }
+      ],
+      "relationships": [
+        {
+          "type": "aggregation",
+          "target": "coverage",
+          "cardinality": "1..*",
+          "description": "Policy includes one or more coverages"
+        },
+        {
+          "type": "association",
+          "target": "party",
+          "cardinality": "1..*",
+          "description": "Policy involves multiple parties"
+        },
+        {
+          "type": "association",
+          "target": "premium",
+          "cardinality": "1",
+          "description": "Policy has premium information"
+        }
+      ],
+      "siviReference": "AFD.Policy",
+      "version": "2.0"
+    },
+    {
+      "id": "coverage",
+      "name": "Coverage",
+      "description": "Coverage entity for collective ongevallenverzekering voor bedrijven",
+      "type": "Coverage",
+      "attributes": [
+        {
+          "name": "coverageId",
+          "type": "string",
+          "required": true,
+          "description": "Unique identifier for coverage",
+          "siviReference": "AFD.Coverage.Id",
+          "example": "COVERAGE-001"
+        },
+        {
+          "name": "name",
+          "type": "string",
+          "required": true,
+          "description": "Name of the coverage",
+          "siviReference": "AFD.Coverage.Name",
+          "example": "Example Coverage"
+        },
+        {
+          "name": "description",
+          "type": "string",
+          "required": false,
+          "description": "Description of the coverage",
+          "siviReference": "AFD.Coverage.Description",
+          "example": "Detailed description of coverage"
+        }
+      ],
+      "relationships": [],
+      "siviReference": "AFD.Coverage",
+      "version": "2.0"
+    },
+    {
+      "id": "party",
+      "name": "Party",
+      "description": "Party entity for collective ongevallenverzekering voor bedrijven",
+      "type": "Party",
+      "attributes": [
+        {
+          "name": "partyId",
+          "type": "string",
+          "required": true,
+          "description": "Unique identifier for party",
+          "siviReference": "AFD.Party.Id",
+          "example": "PARTY-001"
+        },
+        {
+          "name": "name",
+          "type": "string",
+          "required": true,
+          "description": "Name of the party",
+          "siviReference": "AFD.Party.Name",
+          "example": "Example Party"
+        },
+        {
+          "name": "description",
+          "type": "string",
+          "required": false,
+          "description": "Description of the party",
+          "siviReference": "AFD.Party.Description",
+          "example": "Detailed description of party"
+        }
+      ],
+      "relationships": [],
+      "siviReference": "AFD.Party",
+      "version": "2.0"
+    },
+    {
+      "id": "claim",
+      "name": "Claim",
+      "description": "Claim entity for collective ongevallenverzekering voor bedrijven",
+      "type": "Claim",
+      "attributes": [
+        {
+          "name": "claimId",
+          "type": "string",
+          "required": true,
+          "description": "Unique identifier for claim",
+          "siviReference": "AFD.Claim.Id",
+          "example": "CLAIM-001"
+        },
+        {
+          "name": "name",
+          "type": "string",
+          "required": true,
+          "description": "Name of the claim",
+          "siviReference": "AFD.Claim.Name",
+          "example": "Example Claim"
+        },
+        {
+          "name": "description",
+          "type": "string",
+          "required": false,
+          "description": "Description of the claim",
+          "siviReference": "AFD.Claim.Description",
+          "example": "Detailed description of claim"
+        }
+      ],
+      "relationships": [
+        {
+          "type": "association",
+          "target": "policy",
+          "cardinality": "1",
+          "description": "Claim is associated with a policy"
+        },
+        {
+          "type": "association",
+          "target": "coverage",
+          "cardinality": "1..*",
+          "description": "Claim affects one or more coverages"
+        }
+      ],
+      "siviReference": "AFD.Claim",
+      "version": "2.0"
+    },
+    {
+      "id": "premium",
+      "name": "Premium",
+      "description": "Premium entity for collective ongevallenverzekering voor bedrijven",
+      "type": "Premium",
+      "attributes": [
+        {
+          "name": "premiumId",
+          "type": "string",
+          "required": true,
+          "description": "Unique identifier for premium",
+          "siviReference": "AFD.Premium.Id",
+          "example": "PREMIUM-001"
+        },
+        {
+          "name": "name",
+          "type": "string",
+          "required": true,
+          "description": "Name of the premium",
+          "siviReference": "AFD.Premium.Name",
+          "example": "Example Premium"
+        },
+        {
+          "name": "description",
+          "type": "string",
+          "required": false,
+          "description": "Description of the premium",
+          "siviReference": "AFD.Premium.Description",
+          "example": "Detailed description of premium"
+        }
+      ],
+      "relationships": [],
+      "siviReference": "AFD.Premium",
+      "version": "2.0"
+    },
+    {
+      "id": "object",
+      "name": "Object",
+      "description": "Object entity for collective ongevallenverzekering voor bedrijven",
+      "type": "Object",
+      "attributes": [
+        {
+          "name": "objectId",
+          "type": "string",
+          "required": true,
+          "description": "Unique identifier for object",
+          "siviReference": "AFD.Object.Id",
+          "example": "OBJECT-001"
+        },
+        {
+          "name": "name",
+          "type": "string",
+          "required": true,
+          "description": "Name of the object",
+          "siviReference": "AFD.Object.Name",
+          "example": "Example Object"
+        },
+        {
+          "name": "description",
+          "type": "string",
+          "required": false,
+          "description": "Description of the object",
+          "siviReference": "AFD.Object.Description",
+          "example": "Detailed description of object"
+        }
+      ],
+      "relationships": [],
+      "siviReference": "AFD.Object",
+      "version": "2.0"
+    },
+    {
+      "id": "clause",
+      "name": "Clause",
+      "description": "Clause entity for collective ongevallenverzekering voor bedrijven",
+      "type": "Clause",
+      "attributes": [
+        {
+          "name": "clauseId",
+          "type": "string",
+          "required": true,
+          "description": "Unique identifier for clause",
+          "siviReference": "AFD.Clause.Id",
+          "example": "CLAUSE-001"
+        },
+        {
+          "name": "name",
+          "type": "string",
+          "required": true,
+          "description": "Name of the clause",
+          "siviReference": "AFD.Clause.Name",
+          "example": "Example Clause"
+        },
+        {
+          "name": "description",
+          "type": "string",
+          "required": false,
+          "description": "Description of the clause",
+          "siviReference": "AFD.Clause.Description",
+          "example": "Detailed description of clause"
+        }
+      ],
+      "relationships": [],
+      "siviReference": "AFD.Clause",
+      "version": "2.0"
+    }
+  ]
+}
