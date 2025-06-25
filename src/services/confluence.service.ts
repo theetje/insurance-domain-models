@@ -315,14 +315,16 @@ export class ConfluenceService {
 
 ${await this.buildDiagramSection(diagramFormat, gitFileUrls.diagramUrl, diagramContent, model.name, pageId)}
 
-<ac:structured-macro ac:name="expand" ac:schema-version="1" ac:macro-id="diagram-source-expand">
-  <ac:parameter ac:name="title">📋 View Diagram Source Code</ac:parameter>
+<ac:structured-macro ac:name="expand" ac:schema-version="1" ac:macro-id="model-source-expand">
+  <ac:parameter ac:name="title">📋 View SIVI Model Source Code</ac:parameter>
   <ac:rich-text-body>
+    <p><strong>SIVI AFD 2.0 Model Definition:</strong> This is the complete JSON model definition that follows SIVI AFD 2.0 standards.</p>
     <ac:structured-macro ac:name="code" ac:schema-version="1">
-      <ac:parameter ac:name="language">${diagramFormat}</ac:parameter>
-      <ac:parameter ac:name="title">${diagramFormat.toUpperCase()} Source</ac:parameter>
-      <ac:rich-text-body><![CDATA[${diagramContent}]]></ac:rich-text-body>
+      <ac:parameter ac:name="language">json</ac:parameter>
+      <ac:parameter ac:name="title">SIVI AFD 2.0 Model Source</ac:parameter>
+      <ac:rich-text-body><![CDATA[${JSON.stringify(model, null, 2)}]]></ac:rich-text-body>
     </ac:structured-macro>
+    <p><strong>Usage:</strong> Copy this JSON to create new models or modify existing ones. Make sure to follow SIVI AFD 2.0 entity types and naming conventions.</p>
   </ac:rich-text-body>
 </ac:structured-macro>
 
@@ -457,22 +459,24 @@ ${await this.buildDiagramSection(diagramFormat, gitFileUrls.diagramUrl, diagramC
     
     <p><ac:image ac:width="100%"><ri:attachment ri:filename="${modelName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9\-]/g, '')}-diagram.png" /></ac:image></p>
     
-    <h4>📋 Source Code</h4>
-    <p><strong>Copy and paste this code to modify or regenerate the diagram:</strong></p>
+    <h4>📋 SIVI Model Source</h4>
+    <p><strong>The complete SIVI AFD 2.0 model definition for this diagram is available below in the "View SIVI Model Source Code" section.</strong></p>
     
-    <ac:structured-macro ac:name="code" ac:schema-version="1" ac:macro-id="${format}-source-code">
-      <ac:parameter ac:name="language">${format}</ac:parameter>
-      <ac:parameter ac:name="title">${format.toUpperCase()} Diagram Source Code</ac:parameter>
-      <ac:plain-text-body><![CDATA[${diagramContent}]]></ac:plain-text-body>
+    <ac:structured-macro ac:name="info" ac:schema-version="1">
+      <ac:rich-text-body>
+        <p><strong>💡 Model-First Approach:</strong> This diagram is automatically generated from the SIVI AFD 2.0 compliant JSON model definition. 
+        To modify the diagram, update the model entities and relationships in the source JSON, then regenerate.</p>
+      </ac:rich-text-body>
     </ac:structured-macro>
     
     <h4>🔗 External Tools</h4>
     <ul>
-      <li><strong>Live Editor:</strong> <a href="https://${format}.live/edit#pako:${Buffer.from(diagramContent).toString('base64')}">Open in ${format === 'mermaid' ? 'Mermaid' : 'PlantUML'} Live Editor</a></li>
-      <li><strong>Git Source:</strong> <a href="${gitUrl}">View source file in repository</a></li>
+      <li><strong>Mermaid Live Editor:</strong> <a href="https://${format}.live/edit#pako:${Buffer.from(diagramContent).toString('base64')}">Open current diagram in ${format === 'mermaid' ? 'Mermaid' : 'PlantUML'} Live Editor</a></li>
+      <li><strong>Git Source:</strong> <a href="${gitUrl}">View diagram source file in repository</a></li>
+      <li><strong>SIVI AFD 2.0:</strong> <a href="https://www.sivi.org/afd">Official SIVI AFD documentation</a></li>
     </ul>
     
-    <p><em>✅ This diagram is automatically generated and uploaded as a high-quality image, so it's always visible and doesn't require any additional Confluence apps.</em></p>
+    <p><em>✅ This diagram is automatically generated from the SIVI AFD 2.0 model and uploaded as a high-quality image for optimal viewing.</em></p>
   </ac:rich-text-body>
 </ac:structured-macro>`;
 
@@ -486,18 +490,20 @@ ${await this.buildDiagramSection(diagramFormat, gitFileUrls.diagramUrl, diagramC
   <ac:rich-text-body>
     <ac:structured-macro ac:name="info" ac:schema-version="1">
       <ac:rich-text-body>
-        <p><strong>⚠️ Image Generation Failed:</strong> Displaying source code instead. You can copy this code and paste it into a ${format} editor to view the diagram.</p>
+        <p><strong>⚠️ Image Generation Failed:</strong> The diagram could not be generated as an image. Please refer to the SIVI AFD 2.0 model definition below for the complete structure.</p>
         <p><strong>🔗 Source:</strong> <a href="${gitUrl}">View diagram source in Git →</a></p>
+        <p><strong>💡 Alternative:</strong> Use the SIVI Model Source Code section below to understand the complete model structure.</p>
       </ac:rich-text-body>
     </ac:structured-macro>
 
     <ac:structured-macro ac:name="code" ac:schema-version="1" ac:macro-id="${format}-fallback-code">
       <ac:parameter ac:name="language">${format}</ac:parameter>
-      <ac:parameter ac:name="title">${format.toUpperCase()} Diagram Source Code</ac:parameter>
+      <ac:parameter ac:name="title">${format.toUpperCase()} Diagram Code (for debugging)</ac:parameter>
       <ac:plain-text-body><![CDATA[${diagramContent}]]></ac:plain-text-body>
     </ac:structured-macro>
     
-    <p><strong>🚀 Live Demo:</strong> <a href="https://${format}.live/edit#pako:${Buffer.from(diagramContent).toString('base64')}">Open in ${format === 'mermaid' ? 'Mermaid' : 'PlantUML'} Live Editor</a></p>
+    <p><strong>🚀 External Editor:</strong> <a href="https://${format}.live/edit#pako:${Buffer.from(diagramContent).toString('base64')}">Open in ${format === 'mermaid' ? 'Mermaid' : 'PlantUML'} Live Editor</a></p>
+    <p><strong>📋 Model Definition:</strong> See the "View SIVI Model Source Code" section below for the complete model structure.</p>
   </ac:rich-text-body>
 </ac:structured-macro>`;
     }
@@ -594,11 +600,11 @@ ${await this.buildDiagramSection(diagramFormat, gitFileUrls.diagramUrl, diagramC
   </tr>
   ${models.map(model => `
     <tr>
-      <td><strong><a href="/pages/viewpage.action?pageId=${model.pageId}">${model.name}</a></strong></td>
+      <td><strong><ac:link><ri:page ri:content-title="${model.name} - Domain Model" /><ac:plain-text-link-body><![CDATA[${model.name}]]></ac:plain-text-link-body></ac:link></strong></td>
       <td><span style="background-color: #e8f5e8; padding: 2px 6px; border-radius: 3px;">${model.version}</span></td>
       <td>${new Date(model.lastUpdated).toLocaleDateString()}</td>
       <td>
-        <a href="/pages/viewpage.action?pageId=${model.pageId}">View Model</a>
+        <ac:link><ri:page ri:content-title="${model.name} - Domain Model" /><ac:plain-text-link-body><![CDATA[View Model]]></ac:plain-text-link-body></ac:link>
       </td>
     </tr>
   `).join('')}
