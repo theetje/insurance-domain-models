@@ -169,7 +169,8 @@ export class ConfluenceService {
     }
   ): Promise<string> {
     try {
-      const pageTitle = this.config.pageTitle || `${model.name} - Domain Model`;
+      // Always use individual page titles for model pages, ignore config.pageTitle
+      const pageTitle = `${model.name} - Domain Model`;
       this.logger.info(`Creating/updating Confluence page: ${pageTitle}`);
 
       // Check if page already exists

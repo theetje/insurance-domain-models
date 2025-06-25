@@ -42,16 +42,23 @@ export class DiagramImageService {
       try {
         const page = await browser.newPage();
         
+        // Set longer timeout for complex diagrams
+        page.setDefaultNavigationTimeout(60000); // 60 seconds
+        page.setDefaultTimeout(60000); // 60 seconds
+        
         // Set viewport size
         await page.setViewport({ width, height });
         
-        // Set the HTML content
-        await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+        // Set the HTML content with longer timeout
+        await page.setContent(htmlContent, { 
+          waitUntil: 'networkidle0',
+          timeout: 60000 // 60 seconds
+        });
         
-        // Wait for Mermaid to render completely
+        // Wait for Mermaid to render completely with longer timeout
         await page.waitForFunction(
           () => (globalThis as any).mermaidRenderComplete === true,
-          { timeout: 15000 }
+          { timeout: 45000 } // 45 seconds
         );
         
         // Check if there was a rendering error
