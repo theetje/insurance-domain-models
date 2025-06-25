@@ -1,71 +1,105 @@
 classDiagram
 
-    %% Domain Model: Collective ongevallenverzekering voor bedrijven
+    %% Domain Model: Collectieve Ongevallenverzekering voor Bedrijven
     %% Version: 1.0.0
-    %% Generated: 2025-06-25T11:40:55.182Z
+    %% Generated: 2025-06-25T11:51:55.893Z
     %% Based on SIVI AFD 2.0
 
-    class Policy {
-        +policyId string
-        +name string
-        -description string
+    class Polis {
+        +polisNummer string
+        +polisNaam string
+        +bedrijfsNaam string
+        +ingangsDatum Date
+        +vervaldatum Date
+        +bedrijfsTak string
+        +risicoKlasse string
         <<Policy>>
         +siviRef: AFD.Policy
     }
 
-    class Coverage {
-        +coverageId string
-        +name string
-        -description string
+    class Dekking {
+        +dekkingsType string
+        +maximumBedrag number
+        -eigenRisico number
+        -wachtTijd number
+        -uitkeringsPercentage number
         <<Coverage>>
         +siviRef: AFD.Coverage
     }
 
-    class Party {
-        +partyId string
-        +name string
-        -description string
+    class Polishouder {
+        +bedrijfsNaam string
+        +kvkNummer string
+        +contactPersoon string
+        +adres string
+        +telefoonNummer string
+        +emailAdres string
         <<Party>>
         +siviRef: AFD.Party
     }
 
-    class Claim {
-        +claimId string
-        +name string
-        -description string
-        <<Claim>>
-        +siviRef: AFD.Claim
-    }
-
-    class Premium {
-        +premiumId string
-        +name string
-        -description string
-        <<Premium>>
-        +siviRef: AFD.Premium
-    }
-
-    class Object {
-        +objectId string
-        +name string
-        -description string
+    class VerzekerdenGroep {
+        +groepType string
+        +groepOmschrijving string
+        +aantalPersonen number
+        -leeftijdsBereik string
+        -minimumUrenPerWeek number
+        -bijzondereVoorwaarden string
+        +actief boolean
         <<Object>>
         +siviRef: AFD.Object
     }
 
-    class Clause {
-        +clauseId string
-        +name string
-        -description string
-        <<Clause>>
-        +siviRef: AFD.Clause
+    class VerzekerdePersoon {
+        +voorNaam string
+        +achterNaam string
+        +geboorteDatum Date
+        -bsn string
+        -functie string
+        +startdatumVerzekering Date
+        -einddatumVerzekering Date
+        +relatieTotBedrijf string
+        <<Party>>
+        +siviRef: AFD.Party
     }
 
-    Policy o-- Coverage : "Policy includes one or more coverages" "1..*"
-    Policy --> Party : "Policy involves multiple parties" "1..*"
-    Policy --> Premium : "Policy has premium information" "1"
-    Claim --> Policy : "Claim is associated with a policy" "1"
-    Claim --> Coverage : "Claim affects one or more coverages" "1..*"
+    class Schademelding {
+        +schadeNummer string
+        +ongevalDatum Date
+        -ongevalTijd string
+        +ongevalOmschrijving string
+        +ongevalLocatie string
+        +meldingsDatum Date
+        +schadeStatus string
+        -geschatBedrag number
+        -uitgekeerdBedrag number
+        -letselType string
+        <<Claim>>
+        +siviRef: AFD.Claim
+    }
+
+    class Premie {
+        +basisPremiePerPersoon number
+        +groepsPremie number
+        +totalePremie number
+        +betalingsFrequentie string
+        +risicoFactor number
+        -kortingsPercentage number
+        -indexatiePercentage number
+        <<Premium>>
+        +siviRef: AFD.Premium
+    }
+
+    Polis *-- Dekking : "Polis bevat een of meer dekkingen" "1..*"
+    Polis --> Polishouder : "Polis heeft een polishouder (het bedrijf)" "1"
+    Polis *-- VerzekerdenGroep : "Polis heeft verschillende verzekerdengroepen" "1..*"
+    Polis --> Premie : "Polis heeft premie-informatie" "1"
+    Dekking --> VerzekerdenGroep : "Dekking geldt voor specifieke verzekerdengroepen" "1..*"
+    Polishouder *-- VerzekerdenGroep : "Polishouder heeft verschillende groepen verzekerden" "1..*"
+    VerzekerdenGroep *-- VerzekerdePersoon : "Groep bestaat uit individuele verzekerden" "1..*"
+    VerzekerdePersoon --> Schademelding : "Verzekerde kan schademeldingen hebben" "0..*"
+    Schademelding --> Dekking : "Schade valt onder specifieke dekkingen" "1..*"
+    Premie --> VerzekerdenGroep : "Premie wordt berekend per verzekerdengroep" "1..*"
 
     %% Enhanced SIVI AFD 2.0 Styling
     classDef policyClass fill:#e1f5fe,stroke:#01579b,stroke-width:3px,color:#000000
@@ -76,13 +110,13 @@ classDiagram
     classDef objectClass fill:#f1f8e9,stroke:#33691e,stroke-width:3px,color:#000000
     classDef clauseClass fill:#fce4ec,stroke:#ad1457,stroke-width:3px,color:#000000
 
-    class Policy policyClass
-    class Coverage coverageClass
-    class Party partyClass
-    class Claim claimClass
-    class Premium premiumClass
-    class Object objectClass
-    class Clause clauseClass
+    class Polis policyClass
+    class Dekking coverageClass
+    class Polishouder partyClass
+    class VerzekerdenGroep objectClass
+    class VerzekerdePersoon partyClass
+    class Schademelding claimClass
+    class Premie premiumClass
 
     %% SIVI AFD 2.0 Compliance Notes
-    note for Policy "SIVI AFD 2.0 Compliant\nNamespace: nl.sivi.afd.insurance\nVersion: 1.0.0"
+    note for Polis "SIVI AFD 2.0 Compliant\nNamespace: nl.sivi.afd.insurance.ongevallen\nVersion: 1.0.0"

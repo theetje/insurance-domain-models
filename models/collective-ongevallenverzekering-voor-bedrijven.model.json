@@ -1,290 +1,619 @@
 {
-  "name": "Collective ongevallenverzekering voor bedrijven",
+  "name": "Collectieve Ongevallenverzekering voor Bedrijven",
   "version": "1.0.0",
-  "description": "SIVI AFD 2.0 compliant collective ongevallenverzekering voor bedrijven domain model",
-  "namespace": "nl.sivi.afd.insurance",
+  "description": "SIVI AFD 2.0 compliant Nederlandse collectieve ongevallenverzekering voor bedrijven met verschillende verzekerdengroepen",
+  "namespace": "nl.sivi.afd.insurance.ongevallen",
   "entities": [
     {
-      "id": "policy",
-      "name": "Policy",
-      "description": "Policy entity for collective ongevallenverzekering voor bedrijven",
+      "id": "polis",
+      "name": "Polis",
+      "description": "Collectieve ongevallenverzekering polis voor bedrijven",
       "type": "Policy",
       "attributes": [
         {
-          "name": "policyId",
+          "name": "polisNummer",
           "type": "string",
           "required": true,
-          "description": "Unique identifier for policy",
-          "siviReference": "AFD.Policy.Id",
-          "example": "POLICY-001"
+          "description": "Polisnummer van de collectieve ongevallenverzekering",
+          "siviReference": "AFD.Policy.Number",
+          "example": "COV-2025-001234"
         },
         {
-          "name": "name",
+          "name": "polisNaam",
           "type": "string",
           "required": true,
-          "description": "Name of the policy",
+          "description": "Naam van de polis",
           "siviReference": "AFD.Policy.Name",
-          "example": "Example Policy"
+          "example": "Collectieve Ongevallenverzekering ABC Kinderopvang"
         },
         {
-          "name": "description",
+          "name": "bedrijfsNaam",
           "type": "string",
-          "required": false,
-          "description": "Description of the policy",
-          "siviReference": "AFD.Policy.Description",
-          "example": "Detailed description of policy"
+          "required": true,
+          "description": "Naam van het verzekerde bedrijf",
+          "siviReference": "AFD.Policy.CompanyName",
+          "example": "ABC Kinderopvang B.V."
+        },
+        {
+          "name": "ingangsDatum",
+          "type": "Date",
+          "required": true,
+          "description": "Ingangsdatum van de verzekering",
+          "siviReference": "AFD.Policy.EffectiveDate",
+          "example": "2025-01-01"
+        },
+        {
+          "name": "vervaldatum",
+          "type": "Date",
+          "required": true,
+          "description": "Vervaldatum van de verzekering",
+          "siviReference": "AFD.Policy.ExpiryDate",
+          "example": "2025-12-31"
+        },
+        {
+          "name": "bedrijfsTak",
+          "type": "string",
+          "required": true,
+          "description": "Bedrijfstak volgens SBI-code",
+          "siviReference": "AFD.Policy.Industry",
+          "example": "88911 - Kinderopvang"
+        },
+        {
+          "name": "risicoKlasse",
+          "type": "string",
+          "required": true,
+          "description": "Risicoklasse voor premieberekening",
+          "siviReference": "AFD.Policy.RiskClass",
+          "example": "Laag"
         }
       ],
       "relationships": [
         {
-          "type": "aggregation",
-          "target": "coverage",
+          "type": "composition",
+          "target": "dekking",
           "cardinality": "1..*",
-          "description": "Policy includes one or more coverages"
+          "description": "Polis bevat een of meer dekkingen"
         },
         {
           "type": "association",
-          "target": "party",
-          "cardinality": "1..*",
-          "description": "Policy involves multiple parties"
-        },
-        {
-          "type": "association",
-          "target": "premium",
+          "target": "polishouder",
           "cardinality": "1",
-          "description": "Policy has premium information"
+          "description": "Polis heeft een polishouder (het bedrijf)"
+        },
+        {
+          "type": "composition",
+          "target": "verzekerdengroep",
+          "cardinality": "1..*",
+          "description": "Polis heeft verschillende verzekerdengroepen"
+        },
+        {
+          "type": "association",
+          "target": "premie",
+          "cardinality": "1",
+          "description": "Polis heeft premie-informatie"
         }
       ],
       "siviReference": "AFD.Policy",
       "version": "2.0"
     },
     {
-      "id": "coverage",
-      "name": "Coverage",
-      "description": "Coverage entity for collective ongevallenverzekering voor bedrijven",
+      "id": "dekking",
+      "name": "Dekking",
+      "description": "Ongevallendekking binnen de collectieve verzekering",
       "type": "Coverage",
       "attributes": [
         {
-          "name": "coverageId",
+          "name": "dekkingsType",
           "type": "string",
           "required": true,
-          "description": "Unique identifier for coverage",
-          "siviReference": "AFD.Coverage.Id",
-          "example": "COVERAGE-001"
+          "description": "Type dekking (overlijden, blijvende invaliditeit, tijdelijke arbeidsongeschiktheid, geneeskundige kosten)",
+          "siviReference": "AFD.Coverage.Type",
+          "example": "Overlijden door ongeval"
         },
         {
-          "name": "name",
-          "type": "string",
+          "name": "maximumBedrag",
+          "type": "number",
           "required": true,
-          "description": "Name of the coverage",
-          "siviReference": "AFD.Coverage.Name",
-          "example": "Example Coverage"
+          "description": "Maximum verzekerd bedrag in EUR",
+          "siviReference": "AFD.Coverage.MaxAmount",
+          "example": "100000"
         },
         {
-          "name": "description",
-          "type": "string",
+          "name": "eigenRisico",
+          "type": "number",
           "required": false,
-          "description": "Description of the coverage",
-          "siviReference": "AFD.Coverage.Description",
-          "example": "Detailed description of coverage"
-        }
-      ],
-      "relationships": [],
-      "siviReference": "AFD.Coverage",
-      "version": "2.0"
-    },
-    {
-      "id": "party",
-      "name": "Party",
-      "description": "Party entity for collective ongevallenverzekering voor bedrijven",
-      "type": "Party",
-      "attributes": [
-        {
-          "name": "partyId",
-          "type": "string",
-          "required": true,
-          "description": "Unique identifier for party",
-          "siviReference": "AFD.Party.Id",
-          "example": "PARTY-001"
+          "description": "Eigen risico in EUR",
+          "siviReference": "AFD.Coverage.Deductible",
+          "example": "0"
         },
         {
-          "name": "name",
-          "type": "string",
-          "required": true,
-          "description": "Name of the party",
-          "siviReference": "AFD.Party.Name",
-          "example": "Example Party"
-        },
-        {
-          "name": "description",
-          "type": "string",
+          "name": "wachtTijd",
+          "type": "number",
           "required": false,
-          "description": "Description of the party",
-          "siviReference": "AFD.Party.Description",
-          "example": "Detailed description of party"
-        }
-      ],
-      "relationships": [],
-      "siviReference": "AFD.Party",
-      "version": "2.0"
-    },
-    {
-      "id": "claim",
-      "name": "Claim",
-      "description": "Claim entity for collective ongevallenverzekering voor bedrijven",
-      "type": "Claim",
-      "attributes": [
-        {
-          "name": "claimId",
-          "type": "string",
-          "required": true,
-          "description": "Unique identifier for claim",
-          "siviReference": "AFD.Claim.Id",
-          "example": "CLAIM-001"
+          "description": "Wachttijd in dagen",
+          "siviReference": "AFD.Coverage.WaitingPeriod",
+          "example": "0"
         },
         {
-          "name": "name",
-          "type": "string",
-          "required": true,
-          "description": "Name of the claim",
-          "siviReference": "AFD.Claim.Name",
-          "example": "Example Claim"
-        },
-        {
-          "name": "description",
-          "type": "string",
+          "name": "uitkeringsPercentage",
+          "type": "number",
           "required": false,
-          "description": "Description of the claim",
-          "siviReference": "AFD.Claim.Description",
-          "example": "Detailed description of claim"
+          "description": "Uitkeringspercentage bij gedeeltelijke invaliditeit",
+          "siviReference": "AFD.Coverage.PayoutPercentage",
+          "example": "100"
         }
       ],
       "relationships": [
         {
           "type": "association",
-          "target": "policy",
-          "cardinality": "1",
-          "description": "Claim is associated with a policy"
+          "target": "verzekerdengroep",
+          "cardinality": "1..*",
+          "description": "Dekking geldt voor specifieke verzekerdengroepen"
+        }
+      ],
+      "siviReference": "AFD.Coverage",
+      "version": "2.0"
+    },
+    {
+      "id": "polishouder",
+      "name": "Polishouder",
+      "description": "Polishouder - het bedrijf dat de verzekering afsluit en betaalt",
+      "type": "Party",
+      "attributes": [
+        {
+          "name": "bedrijfsNaam",
+          "type": "string",
+          "required": true,
+          "description": "Bedrijfsnaam van de polishouder",
+          "siviReference": "AFD.Party.CompanyName",
+          "example": "ABC Kinderopvang B.V."
         },
         {
-          "type": "association",
-          "target": "coverage",
+          "name": "kvkNummer",
+          "type": "string",
+          "required": true,
+          "description": "KvK nummer van het bedrijf",
+          "siviReference": "AFD.Party.KvKNumber",
+          "example": "12345678"
+        },
+        {
+          "name": "contactPersoon",
+          "type": "string",
+          "required": true,
+          "description": "Contactpersoon van het bedrijf",
+          "siviReference": "AFD.Party.ContactPerson",
+          "example": "Jan Jansen"
+        },
+        {
+          "name": "adres",
+          "type": "string",
+          "required": true,
+          "description": "Adres van het bedrijf",
+          "siviReference": "AFD.Party.Address",
+          "example": "Hoofdstraat 123, 1234AB Amsterdam"
+        },
+        {
+          "name": "telefoonNummer",
+          "type": "string",
+          "required": true,
+          "description": "Telefoonnummer van het bedrijf",
+          "siviReference": "AFD.Party.Phone",
+          "example": "020-1234567"
+        },
+        {
+          "name": "emailAdres",
+          "type": "string",
+          "required": true,
+          "description": "E-mailadres van de contactpersoon",
+          "siviReference": "AFD.Party.Email",
+          "example": "j.jansen@abckinderopvang.nl"
+        }
+      ],
+      "relationships": [
+        {
+          "type": "composition",
+          "target": "verzekerdengroep",
           "cardinality": "1..*",
-          "description": "Claim affects one or more coverages"
+          "description": "Polishouder heeft verschillende groepen verzekerden"
+        }
+      ],
+      "siviReference": "AFD.Party",
+      "version": "2.0"
+    },
+    {
+      "id": "verzekerdengroep",
+      "name": "VerzekerdenGroep",
+      "description": "Groepen van verzekerden binnen het bedrijf",
+      "type": "Object",
+      "attributes": [
+        {
+          "name": "groepType",
+          "type": "string",
+          "required": true,
+          "description": "Type groep: werknemers_vaste_dienst, werknemers_parttime, bezoekers, vrijwilligers, kinderen_opvang",
+          "siviReference": "AFD.Object.GroupType",
+          "example": "werknemers_vaste_dienst"
+        },
+        {
+          "name": "groepOmschrijving",
+          "type": "string",
+          "required": true,
+          "description": "Omschrijving van de groep",
+          "siviReference": "AFD.Object.Description",
+          "example": "Werknemers in vaste dienst met minimaal 20 uur per week"
+        },
+        {
+          "name": "aantalPersonen",
+          "type": "number",
+          "required": true,
+          "description": "Aantal personen in deze groep",
+          "siviReference": "AFD.Object.Count",
+          "example": "25"
+        },
+        {
+          "name": "leeftijdsBereik",
+          "type": "string",
+          "required": false,
+          "description": "Leeftijdsrange van de groep",
+          "siviReference": "AFD.Object.AgeRange",
+          "example": "18-67"
+        },
+        {
+          "name": "minimumUrenPerWeek",
+          "type": "number",
+          "required": false,
+          "description": "Minimum aantal uren per week voor dekking",
+          "siviReference": "AFD.Object.MinHoursPerWeek",
+          "example": "20"
+        },
+        {
+          "name": "bijzondereVoorwaarden",
+          "type": "string",
+          "required": false,
+          "description": "Bijzondere voorwaarden voor deze groep",
+          "siviReference": "AFD.Object.SpecialConditions",
+          "example": "Alleen tijdens opvanguren verzekerd voor kinderen"
+        },
+        {
+          "name": "actief",
+          "type": "boolean",
+          "required": true,
+          "description": "Of deze groep actief verzekerd is",
+          "siviReference": "AFD.Object.Active",
+          "example": "true"
+        }
+      ],
+      "relationships": [
+        {
+          "type": "composition",
+          "target": "verzekerdePersoon",
+          "cardinality": "1..*",
+          "description": "Groep bestaat uit individuele verzekerden"
+        }
+      ],
+      "siviReference": "AFD.Object",
+      "version": "2.0"
+    },
+    {
+      "id": "verzekerdePersoon",
+      "name": "VerzekerdePersoon",
+      "description": "Individuele verzekerde persoon",
+      "type": "Party",
+      "attributes": [
+        {
+          "name": "voorNaam",
+          "type": "string",
+          "required": true,
+          "description": "Voornaam van de verzekerde",
+          "siviReference": "AFD.Party.FirstName",
+          "example": "Maria"
+        },
+        {
+          "name": "achterNaam",
+          "type": "string",
+          "required": true,
+          "description": "Achternaam van de verzekerde",
+          "siviReference": "AFD.Party.LastName",
+          "example": "Janssen"
+        },
+        {
+          "name": "geboorteDatum",
+          "type": "Date",
+          "required": true,
+          "description": "Geboortedatum",
+          "siviReference": "AFD.Party.DateOfBirth",
+          "example": "1985-03-15"
+        },
+        {
+          "name": "bsn",
+          "type": "string",
+          "required": false,
+          "description": "Burgerservicenummer (alleen voor werknemers en vrijwilligers)",
+          "siviReference": "AFD.Party.BSN",
+          "example": "123456789"
+        },
+        {
+          "name": "functie",
+          "type": "string",
+          "required": false,
+          "description": "Functie binnen het bedrijf",
+          "siviReference": "AFD.Party.Function",
+          "example": "Pedagogisch medewerker"
+        },
+        {
+          "name": "startdatumVerzekering",
+          "type": "Date",
+          "required": true,
+          "description": "Startdatum verzekering voor deze persoon",
+          "siviReference": "AFD.Party.StartDate",
+          "example": "2025-01-01"
+        },
+        {
+          "name": "einddatumVerzekering",
+          "type": "Date",
+          "required": false,
+          "description": "Einddatum verzekering (indien van toepassing)",
+          "siviReference": "AFD.Party.EndDate",
+          "example": "2025-12-31"
+        },
+        {
+          "name": "relatieTotBedrijf",
+          "type": "string",
+          "required": true,
+          "description": "Relatie tot het bedrijf: werknemer, bezoeker, vrijwilliger, kind_opvang",
+          "siviReference": "AFD.Party.Relationship",
+          "example": "werknemer"
+        }
+      ],
+      "relationships": [
+        {
+          "type": "association",
+          "target": "schademelding",
+          "cardinality": "0..*",
+          "description": "Verzekerde kan schademeldingen hebben"
+        }
+      ],
+      "siviReference": "AFD.Party",
+      "version": "2.0"
+    },
+    {
+      "id": "schademelding",
+      "name": "Schademelding",
+      "description": "Schademelding voor een ongeval",
+      "type": "Claim",
+      "attributes": [
+        {
+          "name": "schadeNummer",
+          "type": "string",
+          "required": true,
+          "description": "Schade nummer",
+          "siviReference": "AFD.Claim.Number",
+          "example": "COV-SCH-2025-001"
+        },
+        {
+          "name": "ongevalDatum",
+          "type": "Date",
+          "required": true,
+          "description": "Datum van het ongeval",
+          "siviReference": "AFD.Claim.IncidentDate",
+          "example": "2025-03-15"
+        },
+        {
+          "name": "ongevalTijd",
+          "type": "string",
+          "required": false,
+          "description": "Tijd van het ongeval",
+          "siviReference": "AFD.Claim.IncidentTime",
+          "example": "14:30"
+        },
+        {
+          "name": "ongevalOmschrijving",
+          "type": "string",
+          "required": true,
+          "description": "Omschrijving van het ongeval",
+          "siviReference": "AFD.Claim.Description",
+          "example": "Val van trap tijdens werkzaamheden, letsel aan linkerarm"
+        },
+        {
+          "name": "ongevalLocatie",
+          "type": "string",
+          "required": true,
+          "description": "Locatie waar het ongeval plaatsvond",
+          "siviReference": "AFD.Claim.Location",
+          "example": "Kinderopvang ABC, speelzaal eerste verdieping"
+        },
+        {
+          "name": "meldingsDatum",
+          "type": "Date",
+          "required": true,
+          "description": "Datum van melding bij verzekeraar",
+          "siviReference": "AFD.Claim.ReportDate",
+          "example": "2025-03-16"
+        },
+        {
+          "name": "schadeStatus",
+          "type": "string",
+          "required": true,
+          "description": "Status: gemeld, in_behandeling, uitgekeerd, afgekeurd, gesloten",
+          "siviReference": "AFD.Claim.Status",
+          "example": "in_behandeling"
+        },
+        {
+          "name": "geschatBedrag",
+          "type": "number",
+          "required": false,
+          "description": "Geschat schadebedrag in EUR",
+          "siviReference": "AFD.Claim.EstimatedAmount",
+          "example": "2500"
+        },
+        {
+          "name": "uitgekeerdBedrag",
+          "type": "number",
+          "required": false,
+          "description": "Daadwerkelijk uitgekeerd bedrag in EUR",
+          "siviReference": "AFD.Claim.PaidAmount",
+          "example": "2350"
+        },
+        {
+          "name": "letselType",
+          "type": "string",
+          "required": false,
+          "description": "Type letsel (botbreuk, kneuzing, snijwond, brandwond, etc.)",
+          "siviReference": "AFD.Claim.InjuryType",
+          "example": "Botbreuk arm"
+        }
+      ],
+      "relationships": [
+        {
+          "type": "association",
+          "target": "dekking",
+          "cardinality": "1..*",
+          "description": "Schade valt onder specifieke dekkingen"
         }
       ],
       "siviReference": "AFD.Claim",
       "version": "2.0"
     },
     {
-      "id": "premium",
-      "name": "Premium",
-      "description": "Premium entity for collective ongevallenverzekering voor bedrijven",
+      "id": "premie",
+      "name": "Premie",
+      "description": "Premie-informatie voor de collectieve ongevallenverzekering",
       "type": "Premium",
       "attributes": [
         {
-          "name": "premiumId",
-          "type": "string",
+          "name": "basisPremiePerPersoon",
+          "type": "number",
           "required": true,
-          "description": "Unique identifier for premium",
-          "siviReference": "AFD.Premium.Id",
-          "example": "PREMIUM-001"
+          "description": "Basispremie per persoon per jaar in EUR",
+          "siviReference": "AFD.Premium.BasePremium",
+          "example": "150"
         },
         {
-          "name": "name",
-          "type": "string",
+          "name": "groepsPremie",
+          "type": "number",
           "required": true,
-          "description": "Name of the premium",
-          "siviReference": "AFD.Premium.Name",
-          "example": "Example Premium"
+          "description": "Totale premie voor deze groep per jaar",
+          "siviReference": "AFD.Premium.GroupPremium",
+          "example": "3750"
         },
         {
-          "name": "description",
+          "name": "totalePremie",
+          "type": "number",
+          "required": true,
+          "description": "Totale jaarpremie voor alle groepen in EUR",
+          "siviReference": "AFD.Premium.TotalPremium",
+          "example": "15000"
+        },
+        {
+          "name": "betalingsFrequentie",
           "type": "string",
+          "required": true,
+          "description": "Betalingsfrequentie: jaarlijks, halfjaarlijks, kwartaal, maandelijks",
+          "siviReference": "AFD.Premium.PaymentFrequency",
+          "example": "maandelijks"
+        },
+        {
+          "name": "risicoFactor",
+          "type": "number",
+          "required": true,
+          "description": "Risicofactor op basis van bedrijfstak (1.0 = standaard)",
+          "siviReference": "AFD.Premium.RiskFactor",
+          "example": "1.2"
+        },
+        {
+          "name": "kortingsPercentage",
+          "type": "number",
           "required": false,
-          "description": "Description of the premium",
-          "siviReference": "AFD.Premium.Description",
-          "example": "Detailed description of premium"
+          "description": "Kortingspercentage bij grote groepen of schadevrij verleden",
+          "siviReference": "AFD.Premium.DiscountPercentage",
+          "example": "10"
+        },
+        {
+          "name": "indexatiePercentage",
+          "type": "number",
+          "required": false,
+          "description": "Jaarlijkse indexatie van premie en verzekerde bedragen",
+          "siviReference": "AFD.Premium.IndexationPercentage",
+          "example": "3.5"
         }
       ],
-      "relationships": [],
+      "relationships": [
+        {
+          "type": "association",
+          "target": "verzekerdengroep",
+          "cardinality": "1..*",
+          "description": "Premie wordt berekend per verzekerdengroep"
+        }
+      ],
       "siviReference": "AFD.Premium",
-      "version": "2.0"
-    },
-    {
-      "id": "object",
-      "name": "Object",
-      "description": "Object entity for collective ongevallenverzekering voor bedrijven",
-      "type": "Object",
-      "attributes": [
-        {
-          "name": "objectId",
-          "type": "string",
-          "required": true,
-          "description": "Unique identifier for object",
-          "siviReference": "AFD.Object.Id",
-          "example": "OBJECT-001"
-        },
-        {
-          "name": "name",
-          "type": "string",
-          "required": true,
-          "description": "Name of the object",
-          "siviReference": "AFD.Object.Name",
-          "example": "Example Object"
-        },
-        {
-          "name": "description",
-          "type": "string",
-          "required": false,
-          "description": "Description of the object",
-          "siviReference": "AFD.Object.Description",
-          "example": "Detailed description of object"
-        }
-      ],
-      "relationships": [],
-      "siviReference": "AFD.Object",
-      "version": "2.0"
-    },
-    {
-      "id": "clause",
-      "name": "Clause",
-      "description": "Clause entity for collective ongevallenverzekering voor bedrijven",
-      "type": "Clause",
-      "attributes": [
-        {
-          "name": "clauseId",
-          "type": "string",
-          "required": true,
-          "description": "Unique identifier for clause",
-          "siviReference": "AFD.Clause.Id",
-          "example": "CLAUSE-001"
-        },
-        {
-          "name": "name",
-          "type": "string",
-          "required": true,
-          "description": "Name of the clause",
-          "siviReference": "AFD.Clause.Name",
-          "example": "Example Clause"
-        },
-        {
-          "name": "description",
-          "type": "string",
-          "required": false,
-          "description": "Description of the clause",
-          "siviReference": "AFD.Clause.Description",
-          "example": "Detailed description of clause"
-        }
-      ],
-      "relationships": [],
-      "siviReference": "AFD.Clause",
       "version": "2.0"
     }
   ],
+  "businessRules": [
+    {
+      "id": "BR001",
+      "name": "Minimum aantal werknemers",
+      "description": "Voor een collectieve ongevallenverzekering geldt een minimum van 5 werknemers in vaste dienst",
+      "rule": "COUNT(verzekerdengroep.WHERE(groepType = 'werknemers_vaste_dienst').verzekerdePersoon) >= 5"
+    },
+    {
+      "id": "BR002",
+      "name": "Leeftijdsgrens kinderen",
+      "description": "Kinderen in de opvang zijn verzekerd tot 12 jaar",
+      "rule": "verzekerdePersoon.WHERE(relatieTotBedrijf = 'kind_opvang').age <= 12"
+    },
+    {
+      "id": "BR003",
+      "name": "Minimum uren parttime",
+      "description": "Parttime werknemers moeten minimaal 12 uur per week werken voor dekking",
+      "rule": "verzekerdengroep.WHERE(groepType = 'werknemers_parttime').minimumUrenPerWeek >= 12"
+    },
+    {
+      "id": "BR004",
+      "name": "Meldingstermijn ongeval",
+      "description": "Ongevallen moeten binnen 48 uur gemeld worden",
+      "rule": "schademelding.meldingsDatum <= schademelding.ongevalDatum + 2_DAYS"
+    },
+    {
+      "id": "BR005",
+      "name": "Maximum leeftijd werknemers",
+      "description": "Werknemers zijn verzekerd tot de AOW-gerechtigde leeftijd (67 jaar)",
+      "rule": "verzekerdePersoon.WHERE(relatieTotBedrijf IN ['werknemer']).age <= 67"
+    }
+  ],
+  "examples": [
+    {
+      "scenario": "Kinderopvang met 25 werknemers",
+      "description": "Een kinderopvang met werknemers, bezoekers en kinderen",
+      "data": {
+        "polishouder": {
+          "bedrijfsNaam": "ABC Kinderopvang B.V.",
+          "kvkNummer": "12345678",
+          "bedrijfsTak": "88911 - Kinderopvang"
+        },
+        "verzekerdengroepen": [
+          {
+            "groepType": "werknemers_vaste_dienst",
+            "aantalPersonen": 15,
+            "leeftijdsBereik": "22-55"
+          },
+          {
+            "groepType": "werknemers_parttime",
+            "aantalPersonen": 10,
+            "minimumUrenPerWeek": 16
+          },
+          {
+            "groepType": "kinderen_opvang",
+            "aantalPersonen": 60,
+            "leeftijdsBereik": "0-4"
+          }
+        ]
+      }
+    }
+  ],
   "metadata": {
-    "created": "2025-06-25T11:40:55.181Z",
-    "updated": "2025-06-25T11:40:55.181Z",
+    "created": "2025-06-25T11:51:55.892Z",
+    "updated": "2025-06-25T11:51:55.892Z",
     "author": "SIVI AFD 2.0 Model Creator",
     "siviVersion": "2.0"
   }
