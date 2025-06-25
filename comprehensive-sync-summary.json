@@ -1,14 +1,14 @@
 {
-  "timestamp": "2025-06-25T08:35:15.063Z",
+  "timestamp": "2025-06-25T08:44:34.983Z",
   "totalModels": 2,
-  "gitCommitHash": "cf5f79be80c616fb7f46d970032f4f2681feefe2",
+  "gitCommitHash": "c62ebd269e8756a4e1204994b0dacf305ad571e2",
   "confluenceIndexPageId": "208404522",
   "modelPages": [
     {
       "name": "Motor Insurance Model",
       "pageId": "208306185",
       "version": "1.0.0",
-      "lastUpdated": "2025-06-25T08:34:50.368Z",
+      "lastUpdated": "2025-06-25T08:44:17.305Z",
       "gitPaths": {
         "modelPath": "/Users/thomasdelange/Development/Hienfeld/model-creator/models/motor-insurance-model.model.json",
         "diagramPath": "/Users/thomasdelange/Development/Hienfeld/model-creator/diagrams/motor-insurance-model-diagram.mmd"
@@ -18,7 +18,7 @@
       "name": "WIA Insurance Model with Captive Structure",
       "pageId": "208404493",
       "version": "1.0.0",
-      "lastUpdated": "2025-06-25T08:34:50.369Z",
+      "lastUpdated": "2025-06-25T08:44:17.306Z",
       "gitPaths": {
         "modelPath": "/Users/thomasdelange/Development/Hienfeld/model-creator/models/wia-insurance-model.model.json",
         "diagramPath": "/Users/thomasdelange/Development/Hienfeld/model-creator/diagrams/wia-insurance-model-diagram.mmd"

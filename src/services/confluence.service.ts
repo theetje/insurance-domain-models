@@ -322,9 +322,10 @@ ${await this.buildDiagramSection(diagramFormat, gitFileUrls.diagramUrl, diagramC
     <ac:structured-macro ac:name="code" ac:schema-version="1">
       <ac:parameter ac:name="language">json</ac:parameter>
       <ac:parameter ac:name="title">SIVI AFD 2.0 Model Source</ac:parameter>
-      <ac:rich-text-body><![CDATA[${JSON.stringify(model, null, 2)}]]></ac:rich-text-body>
+      <ac:rich-text-body><![CDATA[${this.generateCleanModelJson(model)}]]></ac:rich-text-body>
     </ac:structured-macro>
     <p><strong>Usage:</strong> Copy this JSON to create new models or modify existing ones. Make sure to follow SIVI AFD 2.0 entity types and naming conventions.</p>
+    <p><strong>🔍 Model Structure:</strong> This model contains ${model.entities.length} entities with complete SIVI AFD 2.0 compliance including entity types, attributes, relationships, and metadata.</p>
   </ac:rich-text-body>
 </ac:structured-macro>
 
@@ -1115,6 +1116,61 @@ It provides standardized definitions for insurance entities, attributes, and rel
       const message = `Failed to clear all model attachments: ${error instanceof Error ? error.message : 'Unknown error'}`;
       this.logger.error(message, error);
       throw new ConfluenceIntegrationError(message, error);
+    }
+  }
+
+  /**
+   * Generate clean JSON representation of the model for display
+   */
+  private generateCleanModelJson(model: DomainModel): string {
+    try {
+      // Create a clean version of the model without any circular references or unwanted properties
+      const cleanModel = {
+        name: model.name,
+        version: model.version,
+        description: model.description,
+        namespace: model.namespace || 'nl.sivi.afd.insurance',
+        metadata: {
+          created: model.metadata?.created || new Date().toISOString(),
+          updated: model.metadata?.updated || new Date().toISOString(),
+          siviVersion: model.metadata?.siviVersion || '2.0'
+        },
+        entities: model.entities.map(entity => ({
+          id: entity.id,
+          name: entity.name,
+          description: entity.description,
+          type: entity.type,
+          attributes: entity.attributes.map(attr => ({
+            name: attr.name,
+            type: attr.type,
+            required: attr.required || false,
+            description: attr.description,
+            siviReference: attr.siviReference,
+            ...(attr as any).example && { example: (attr as any).example }
+          })),
+          relationships: entity.relationships.map(rel => ({
+            type: rel.type,
+            target: rel.target,
+            cardinality: rel.cardinality,
+            description: rel.description
+          })),
+          siviReference: entity.siviReference,
+          version: entity.version || '2.0'
+        }))
+      };
+
+      return JSON.stringify(cleanModel, null, 2);
+    } catch (error) {
+      this.logger.error('Failed to generate clean model JSON', error);
+      // Fallback to a basic structure
+      return JSON.stringify({
+        name: model.name || 'Unknown Model',
+        version: model.version || '1.0.0',
+        description: model.description || 'SIVI AFD 2.0 compliant domain model',
+        namespace: 'nl.sivi.afd.insurance',
+        entities: model.entities?.length || 0,
+        error: 'Full model serialization failed - see individual entity definitions below'
+      }, null, 2);
     }
   }
 }
